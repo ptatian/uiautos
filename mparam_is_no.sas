@@ -2,8 +2,8 @@
  
  Macro: mparam_is_no
 
- Description: Returns 1 if the macro parameter value is "Yes" 
- (could be "y", "Y", "Yes", "YE", etc.)
+ Description: Returns 1 if the macro parameter value is "No" 
+ (could be "n", "N", "nO", etc.)
  
  Use: Function
  
