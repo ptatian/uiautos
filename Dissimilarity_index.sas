@@ -1,16 +1,19 @@
-/* di.sas - UISUG SAS Macro Library
- *
- * Autocall macro to calculate the dissimilarity index between
- * two populations, varA= and varB=. 
- *
- * NB:  Program written for SAS Version 9.1
- *
- * 07/01/11  Peter A. Tatian
- ****************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Dissimilarity_index
 
-/***** Macro %di() - Calculates dissimilarity index *****/
+ Description: Autocall macro to calculate the dissimilarity index between
+ two populations.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
-%macro di( 
+/***** Macro %Dissimilarity_index() - Calculates dissimilarity index *****/
+
+%macro Dissimilarity_index( 
   data=,        /** Input data set **/
   out=,         /** Output data set & var name (optional) **/
   varA=,        /** Population A **/
@@ -19,10 +22,23 @@
   print=y       /** Print results (Y/N) **/
   );
 
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Dissimilarity_index( data=Test, varA=A, varB=B, by=geo, out=Result )
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   07/01/11  Peter A. Tatian
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
   %local input_data varDI;
 
-  %let print = %upcase( &print );
-  
   %if &out = %then %do;
     %let out = _di_output;
     %let varDI = _DI;
@@ -30,6 +46,13 @@
   %else %do;
     %let varDI = %DSNameOnly( &out );
   %end;
+    
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
 
   ** Calculate total group A and B populations **;
 
@@ -100,7 +123,7 @@
     output out=&out (drop=_type_ _freq_) sum= ;
   run;
 
-  %if &print = Y %then %do;
+  %if %mparam_is_yes( &print ) %then %do;
   
     ** Print DI results **;
 
@@ -113,18 +136,20 @@
     
   %end;
   
+  
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
   ** Cleanup temporary data sets **;
 
   proc datasets library=work memtype=(data) nolist nowarn;
     delete _di_:;
   quit;
 
-%mend di;
-
-/** End Macro Definition **/
+%mend Dissimilarity_index;
 
 
-/*********** UNCOMMENT TO TEST **********************
+
+/************************ UNCOMMENT TO TEST ***************************
 
 ** Locations of SAS autocall macro libraries **;
 
@@ -161,9 +186,9 @@ run;
 
 title2;
 
-%di( data=Test, varA=A, varB=B, by=geo, out= )
-%di( data=Test, varA=A, varB=B, by=, out=work.di_out, print=n )
+%Dissimilarity_index( data=Test, varA=A, varB=B, by=geo, out= )
+%Dissimilarity_index( data=Test, varA=A, varB=B, by=, out=work.di_out, print=n )
 
 %File_info( data=di_out )
 
-/*************************************************************************/
+/**********************************************************************/
