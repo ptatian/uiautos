@@ -1,20 +1,14 @@
-/************************************************************************
-* Program:  Data_to_format.sas
-* Project:  UI SAS Macro Library
-* Author:   P. Tatian
-* Updated:  8/6/04
-* Version:  SAS 8.2
-* 
-* Description:  Create a format using values from a data set
-*
-* Modifications:
-*  11/23/04  Added Data= parameter (alias for input data set name),
-*            check for required parameters.
-*  03/30/06  Added Contents= and Desc= parameters.
-*  10/22/06  Added NotSorted= parameter.
-************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Data_to_format
 
-** Macro Data_to_format - Start Definition **;
+ Description: Create a format using values from a data set
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro Data_to_format( 
   FmtLib=work,    /* Optional: Format library (def. WORK) */
@@ -33,7 +27,35 @@
   Print=Y         /* Optional: Print resulting format (Y/N) */
   );
 
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Data_to_format(
+       FmtLib=General,
+       FmtName=$anc12a,
+       Data=General.ANC2012,
+       Value=ANC2012,
+       Label=ANC2012_name,
+       OtherLabel="Not a valid ANC"
+       )
+  
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+    11/23/04  Added Data= parameter (alias for input data set name),
+              check for required parameters.
+    03/30/06  Added Contents= and Desc= parameters.
+    10/22/06  Added NotSorted= parameter.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
   %Note_mput( macro=Data_to_format, msg=Starting macro. )
+
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
 
   %if %length( &InDS ) = 0 %then %let InDS = &Data;
   
@@ -60,6 +82,9 @@
                  msg=Must provide a char. expression in Label= parameter. )
     %goto err_exit;
   %end;
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
   
   %** TYPE = Type of format (Character/Numeric) **;
 
@@ -82,7 +107,7 @@
     retain fmtname "&fmtname" type "&type" /*hlo "  " */
       default &defaultlen max &maxlen min &minlen;
     
-    %if %upcase( &NotSorted ) = Y %then %do;
+    %if %mparam_is_yes( &NotSorted ) %then %do;
       retain hlo "s";
     %end;
     %else %do;
@@ -139,7 +164,7 @@
   
   %** Print entire format to output **;
   
-  %if %upcase( &print ) = Y %then %do; 
+  %if %mparam_is_yes( &print ) %then %do; 
   
     proc format library=&fmtlib fmtlib;
       select &fmtname;
@@ -150,7 +175,7 @@
   
   %** List contents of format catalog **;
   
-  %if %upcase( &contents ) = Y %then %do;
+  %if %mparam_is_yes( &contents ) %then %do;
 
     proc catalog catalog=&fmtcat;
       contents;
@@ -166,7 +191,9 @@
   %exit:
   %Note_mput( macro=Data_to_format, msg=Exiting macro. )
 
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+
 %mend Data_to_format;
 
-** End Macro Definition **;
 
