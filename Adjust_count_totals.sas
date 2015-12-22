@@ -1,28 +1,62 @@
-/* Adjust_count_totals.sas - SAS Macro Library
- *
- * Adjusts a list of integer count variables against a control total.
- *
- * NB:  Program written for SAS Version 8.2
- *
- * 06/02/03  Peter A. Tatian
- * 06/27/03  Revised so that macro creates its own data step.
- * 06/30/03  Revised so that if control_total is 0, all counts 
- *           will be set to 0.
- * 07/02/03  Corrected problem where initial adjusted counts all round to 0
- *           and so final adjusted counts do not add to control total.
- ****************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Adjust_count_totals
 
-** Macro Adjust_count_totals - Start Definition **;
+ Description: Adjusts a list of integer count variables against a 
+ control total.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro Adjust_count_totals( 
-  in_ds=,
-  out_ds=,
-  control_total=, 
-  counts=, 
-  comp_op=EQ, 
-  debug=N, 
-  quiet=Y 
+  in_ds=,          /** Input data set **/
+  out_ds=,         /** Output data set **/
+  control_total=,  /** Control total var **/
+  counts=,         /** Count vars **/
+  comp_op=EQ,      /** Comparison operator **/
+  debug=N,         /** Print debugging info **/
+  quiet=Y          /** Suppress LOG notes **/
   );
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Adjust_count_totals( 
+       in_ds=Test_adjust_count_totals,
+       out_ds=Adjust_count_results,
+       control_total=total,
+       counts=a b c d,
+       comp_op=eq,
+       debug=y,
+       quiet=n
+     )
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+    06/02/03  Peter A. Tatian
+    06/27/03  Revised so that macro creates its own data step.
+    06/30/03  Revised so that if control_total is 0, all counts 
+              will be set to 0.
+    07/02/03  Corrected problem where initial adjusted counts all round to 0
+              and so final adjusted counts do not add to control total.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+    %local ;
+    
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
 
   data &out_ds;
   
@@ -49,7 +83,7 @@
     _act_ctrl_total = &control_total;
     _act_sum_array = sum( of _act_array{*} );
 
-    %if %upcase( &debug ) = Y %then %do;
+    %if %mparam_is_yes( &debug ) %then %do;
       put / "INPUT DATA" // _n_= _act_ctrl_total= _act_sum_array= ;
       put (&counts) (=);
       ****%put_array( _act_array );
@@ -70,7 +104,7 @@
       _act_sum_array = sum( of _act_array{*} );
       _act_diff = _act_sum_array - _act_ctrl_total;
 
-      %if %upcase( &debug ) = Y %then %do;
+      %if %mparam_is_yes( &debug ) %then %do;
         put / "STEP 1" // _act_ctrl_total= _act_sum_array= _act_diff= ;
         put (&counts) (=);
         ****%put_array( _act_array );
@@ -110,7 +144,7 @@
 
     _act_sum_array = sum( of _act_array{*} );
 
-    %if %upcase( &debug ) = Y %then %do;
+    %if %mparam_is_yes( &debug ) %then %do;
       put / "FINAL" // _act_ctrl_total= _act_sum_array= _act_diff= ;
       put (&counts) (=);
       ****%put_array( _act_array );
@@ -120,18 +154,18 @@
 
   run;
 
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+  
 %mend Adjust_count_totals;
 
-** End Macro Definition **;
 
-
-/***** UNCOMMENT TO TEST MACRO *****
+/************************ UNCOMMENT TO TEST ***************************
 
 ** Autocall macros **;
 
 filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
-filename ncdbmac "D:\Data\NCDB2000\Prog\Macros";
-options sasautos=(ncdbmac uiautos sasautos);
+options sasautos=(uiautos sasautos);
 
 options mprint nosymbolgen nomlogic;
 
@@ -163,5 +197,5 @@ run;
   quiet=n
 )
   
-/***** END MACRO TEST *****/
+/**********************************************************************/
 
