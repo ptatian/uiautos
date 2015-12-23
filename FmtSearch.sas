@@ -1,71 +1,68 @@
-/* Description:  Autocall macro to manage multiple SAS format libraries.
- *
- * Written by Pete Lund, presented at SUGI 28, "Keep Those Formats
- * Rolling: A Macro to Manage the FMTSEARCH= Option."
- * <http://www2.sas.com/proceedings/sugi28/116-28.pdf>
- *
- * Environment:  Windows or Alpha
- * Use in:  Open code
- *
- ************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: FmtSearch
 
-/*-------------------------------------------------------------------*/
-/* program:    FmtSearch.sas                                      |  */
-/* programmer: Pete Lund                                          |©N*/
-/*             (360) 528-8970                                     |2W*/
-/* date:       September 2002                                     |0C*/
-/* project:    Utility macro                                      |0S*/
-/*                                                                |3R*/
-/* purpose: Manages the FMTSEARCH option                          |  */
-/*                                                                |  */
-/*                                                                |  */
-/*-------------------------------------------------------------------*/
-/* incoming:                                                         */
-/*                                                                   */
-/*                                                                   */
-/*-------------------------------------------------------------------*/
-/* outgoing:                                                         */
-/*                                                                   */
-/*                                                                   */
-/*-------------------------------------------------------------------*/
-/* macros:                                                           */
-/*                                                                   */
-/*                                                                   */
-/*-------------------------------------------------------------------*/
-/* formats - permanent:                                              */
-/*                                                                   */
-/*                                                                   */
-/*-------------------------------------------------------------------*/
-/* macro variables/parameters                                        */
-/*   Cat (C):    name of the format catalog                          */
-/*   Action (A): What do you want to do with the catalog:            */
-/*      B = put it at the beginning of the format search list,       */
-/*          even before WORK.FORMATS and LIBRARY.FORMATS             */
-/*      E = put it at the end of the format search list              */
-/*      D = remove it from the format search list                    */
-/*      M = put it in the "middle" of the format search list.  It    */
-/*          will go after WORK.FORMATS and LIBRARY.FORMATS and before*/
-/*          any user-defined catalogs in the search list.            */
-/*      L = simply lists the current format search list              */
-/*                                                                   */
-/*-------------------------------------------------------------------*/
-/* notes: The M does work, it's just that when B has been previously */
-/*        used, WORK and LIBRARY have been explicitely set and a     */
-/*        later M will still go at the front.                        */
-/*-------------------------------------------------------------------*/
-/* changes:                                                          */
-/*                                                                   */
-/*                                                                   */
-/*-------------------------------------------------------------------*/
+ Description: Autocall macro to manage multiple SAS format libraries.
+ 
+ Written by Pete Lund, presented at SUGI 28, "Keep Those Formats
+ Rolling: A Macro to Manage the FMTSEARCH= Option."
+ <http://www2.sas.com/proceedings/sugi28/116-28.pdf>
+
+ Use: Open code
+ 
+ Author: Pete Lund
+ 
+***********************************************************************/
+
+%macro FmtSearch(
+  Action=M, /** Action to perform on catalog **/
+  A=,      /** Action to perform on catalog (alt parameter) **/
+  Cat=,    /** Name of format catalog **/
+  C=,      /** Name of format catalog (alt parameter) **/
+  Status=Y,
+  Recurse=N
+  );
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %FmtSearch( cat=General, action=E )
+       add the catalog General.Formats to the end of the format search
+
+    macro variables/parameters
+      Cat (C):    name of the format catalog
+      Action (A): What do you want to do with the catalog:
+         B = put it at the beginning of the format search list,
+             even before WORK.FORMATS and LIBRARY.FORMATS
+         E = put it at the end of the format search list
+         D = remove it from the format search list
+         M = put it in the "middle" of the format search list.  It
+             will go after WORK.FORMATS and LIBRARY.FORMATS and before
+             any user-defined catalogs in the search list.
+         L = simply lists the current format search list
+
+     notes: The M does work, it's just that when B has been previously 
+            used, WORK and LIBRARY have been explicitely set and a     
+            later M will still go at the front.                        
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
 
 
-%macro FmtSearch(Action=M,A=,Cat=,C=,Status=Y,Recurse=N);
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
   %local _FMS i pos _ThisCat _Index1 _Index2 _ByVal;
   %global _NewFMS _Recurse;
 
   %if &C ne %str() %then %let Cat = &C;
   %if &A ne %str() %then %let Action = &A;
   %let Action = %upcase(&Action);
+
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
 
   %if %index(BMEDXLZ,&Action) eq 0 or
       %length(&Action) ne 1 %then
@@ -77,6 +74,8 @@
       %put ;
       %goto Finish;
     %end;
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
 
   %if &Cat eq %str() and &Action ne L and &Action ne X and &Action ne Z %then
     %do;
@@ -196,4 +195,32 @@
 
   %Finish:
   %let _Recurse = %str();
-%mend;
+  
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+%mend FmtSearch;
+
+
+/************************ UNCOMMENT TO TEST ***************************
+
+libname Test 'D:\';
+
+%FmtSearch( cat=Test, action=E )
+
+/**********************************************************************/
+
+
+/*********************** ORIGINAL HEADER ******************************/
+/*-------------------------------------------------------------------*/
+/* program:    FmtSearch.sas                                      |  */
+/* programmer: Pete Lund                                          |©N*/
+/*             (360) 528-8970                                     |2W*/
+/* date:       September 2002                                     |0C*/
+/* project:    Utility macro                                      |0S*/
+/*                                                                |3R*/
+/* purpose: Manages the FMTSEARCH option                          |  */
+/*                                                                |  */
+/*                                                                |  */
+/*-------------------------------------------------------------------*/
+
