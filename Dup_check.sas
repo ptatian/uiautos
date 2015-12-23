@@ -1,19 +1,15 @@
-/* Dup_check.sas - UI SAS Autocall Macro Library
- *
- * Check data set for duplicate obs. by key variables and print out
- * duplicates.
- *
- * NB:  Program written for SAS Version 8.2
- *
- * 06/27/05  Peter A. Tatian
- * 03/17/06  Added options COUNT=, QUIET=, DEBUG=
- * 03/21/06  Duplicate obs. are now sorted by BY variables & ID variables.
- *           Added option PRINTNUMDUPS=.
-   02/23/11  PAT  Added declaration for local macro vars.
-   03/07/13  PAT  Changed %if test of data= parameter to %length() > 0.
- ****************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Dup_check
 
-/** Macro Dup_check - Start Definition **/
+ Description: Check data set for duplicate obs. by key variables and 
+ print out duplicates.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro Dup_check( 
   data=,                   /** Input data set **/
@@ -27,7 +23,35 @@
   debug=N                  /** Debug mode (MPRINT on) (Y/N) **/
 );
 
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %dup_check( data=test, by=byvar1 byvar2, id=firstname lastname )     
+       prints observations in test that have same values of byvar1 and 
+       byvar2
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
   %local by_data id_data by_freq i item1 item2 itme3 coalesce where_cond;
+
+  %push_option( mprint, quiet=y )
+  
+  %if %mparam_is_yes( &debug ) %then %do;
+    options mprint;
+  %end;
+  %else %do;
+    options nomprint;
+  %end;
+
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
 
   %if %length( &data ) = 0 %then %do;
     %err_mput( macro=Dup_check, msg=You must provide a data set specification in the DATA= option.  Macro exiting. )
@@ -41,19 +65,8 @@
     %goto exit;
   %end;
 
-  %let listdups = %upcase( &listdups );
-  %let printnumdups = %upcase( &printnumdups );
-  %let quiet = %upcase( &quiet );
-  %let debug = %upcase( &debug );
-  
-  %push_option( mprint, quiet=y )
-  
-  %if &debug = Y %then %do;
-    options mprint;
-  %end;
-  %else %do;
-    options nomprint;
-  %end;
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
 
   %** Create comma-separated variable lists **;
 
@@ -121,17 +134,17 @@
   
   %** Report findings to log (if requested) **;
   
-  %if &quiet = N %then %do;
+  %if %mparam_is_no( &quiet ) %then %do;
     %note_mput( macro=Dup_check, msg=&_dup_check_count duplicate observations found in data set %upcase(&data) )
     %note_mput( macro=Dup_check, msg=for BY variables %upcase(&by). )
   %end;
 
   %** Print duplicate obs. (if requested) **;
 
-  %if &listdups = Y %then %do;
+  %if %mparam_is_yes( &listdups ) %then %do;
 
     proc print data=&out noobs 
-      %if &printnumdups = Y %then %do;
+      %if %mparam_is_yes( &printnumdups ) %then %do;
         n='Number of duplicates = '
       %end;
       ;
@@ -142,6 +155,9 @@
     
   %end;
   
+  
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
   %** Clean up temporary data set **;
   
   %if &out = _dup_check %then %do;
@@ -158,10 +174,8 @@
     
 %mend Dup_check;
 
-/** End Macro Definition **/
 
-
-/*********  UNCOMMENT TO TEST  *******************************
+/************************ UNCOMMENT TO TEST ***************************
 
 title "Dup_check:  UI SAS Autocall Macro Library";
 
@@ -202,4 +216,4 @@ proc print data=test;
 
 %put dup_check_count=&dup_check_count;
 
-/************************************************************************/
+/**********************************************************************/
