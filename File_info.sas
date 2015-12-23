@@ -1,20 +1,15 @@
-/************************************************************************
- * Program:  File_info.sas
- * Project:  UI SAS Macro Library
- * Author:   P. Tatian
- * Updated:  8/23/04
- * Version:  SAS 8.12
- * Environment:  Windows or Alpha
- * Use:      Open code
- * 
- * Description:  Autocall macro to print basic information for a
- * data set:  contents, first few obs., and means.
- *
- * Modifications:
- *   10/13/04  Added freqvars option to do frequency tables.
- ************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: File_info
 
-/** Macro File_info - Start Definition **/
+ Description: Autocall macro to print basic information for a
+ data set:  contents, first few obs., and descriptive statistics.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro File_info(
   data=,           /* Data set */
@@ -26,16 +21,41 @@
   stats=n sum mean stddev min max  /* Proc Means statistics (blank to suppress) */
   );
 
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %File_info( data=MyData )
+       prints contents, first 10 obs, and default statistics for
+       MyData data set.
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   10/13/04  Added freqvars option to do frequency tables.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+
   title2 "File = &data";
 
-  %if %upcase( &contents ) = Y %then %do; 
+  %if %mparam_is_yes( &contents ) %then %do; 
     proc contents data=&data;
     run;
   %end;
 
   %if &printobs > 0 %then %do; 
     proc print data=&data (obs=&printobs);
-    %if %upcase( &printchar ) = Y %then %do;
+    %if %mparam_is_yes( &printchar ) %then %do;
       var _char_;
       title3 "Printing first &printobs obs. (char. vars. only)";
     %end;
@@ -65,9 +85,16 @@
 
   %exit:
 
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
   title2;
 
 %mend File_info;
 
-/** End Macro Definition **/
 
+/************************ UNCOMMENT TO TEST ***************************
+
+%File_info( data=Sashelp.Shoes, freqvars=region product )
+
+/**********************************************************************/
