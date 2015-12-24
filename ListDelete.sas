@@ -1,19 +1,14 @@
-/************************************************************************
- * Program:  ListDelete.sas
- * Project:  UI SAS Macro Library
- * Author:   P. Tatian
- * Updated:  8/23/04
- * Version:  SAS 8.12
- * Environment:  Windows or Alpha
- * Use:      Within statement
- * 
- * Description:  Autocall macro to remove entries from a list of items.
- *
-   Modifications:
-   02/23/11  PAT  Added declaration for local macro vars.
- ************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: ListDelete
 
-/** Macro ListDelete - Start Definition **/
+ Description: Autocall macro to remove entries from a list of items.
+ 
+ Use: Function
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro ListDelete(
   list1,           /* List of items */
@@ -21,7 +16,26 @@
   delim=%str( )    /* Delimiter for list (def. blank char) */
   );
 
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %ListDelete( &list1, &list2 )
+       returns list with items in &list2 deleted from &list1
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   02/23/11  PAT  Added declaration for local macro vars.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
   %local Err1 Err2 ListDelete scanlist1 scanlist2 i item;
+    
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
 
   %if &delim = { or &delim = } %then %do;
     %let Err1 = ER;
@@ -37,6 +51,9 @@
     %put &Err1&Err2[ListDelete]:  The text "{{bol}}" or "{{eol}}" must not appear in either list.;
     %goto exit;
   %end;
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
 
   %let ListDelete = ;
   %let scanlist1 = {{bol}}&delim&list1&delim{{eol}};
@@ -61,44 +78,47 @@
 
   %exit:
 
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
 %mend ListDelete;
 
 /** End Macro Definition **/
 
 
-/****** UNCOMMENT TO TEST MACRO ******
+/************************ UNCOMMENT TO TEST ***************************
 
 options mprint nosymbolgen nomlogic;
 
 %let list1 = Z A B C X D Y E Y Z F G X;
 %let list2 = X Y Z;
-%let del = z%ListDelete( &list1, &list2 )z;
+%let del = [%ListDelete( &list1, &list2 )];
 %put _user_;
 
 %let list1 = Z A B C X D Y E Y Z F G X;
 %let list2 = XX Y Z;
-%let del = z%ListDelete( &list1, &list2 )z;
+%let del = [%ListDelete( &list1, &list2 )];
 %put _user_;
 
 %let list1 = Z A B C XX D Y E Y Z F G X;
 %let list2 = X Y Z;
-%let del = z%ListDelete( &list1, &list2 )z;
+%let del = [%ListDelete( &list1, &list2 )];
 %put _user_;
 
 %let list1 = A B C;
 %let list2 = X Y Z;
-%let del = z%ListDelete( &list1, &list2 )z;
+%let del = [%ListDelete( &list1, &list2 )];
 %put _user_;
 
 %let list1 = A B C;
 %let list2 = A B C;
-%let del = z%ListDelete( &list1, &list2 )z;
+%let del = [%ListDelete( &list1, &list2 )];
 %put _user_;
 
 %let list1 = Z.A.B.C.X.D.Y.E.Y.Z.F.G.X;
 %let list2 = X.Y.Z;
-%let del = z%ListDelete( &list1, &list2, delim=. )z;
+%let del = [%ListDelete( &list1, &list2, delim=. )];
 %put _user_;
 
-/***********************************************/
+/**********************************************************************/
 
