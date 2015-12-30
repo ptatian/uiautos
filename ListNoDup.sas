@@ -1,39 +1,52 @@
-/************************************************************************
- * Program:  ListNoDup.sas
- * Project:  UI SAS Macro Library
- * Author:   P. Tatian
- * Updated:  8/23/04
- * Version:  SAS 8.12
- * Environment:  Windows or Alpha
- * Use:      Within statement
- * 
- * Description:  Autocall macro to remove duplicate entries 
- * from a list of items.
- *
- ************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: ListNoDup
 
-/** Macro ListNoDup - Start Definition **/
+ Description: Autocall macro returns list with duplicate entries 
+ removed.
+ 
+ Use: Function
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro ListNoDup(
   list,           /* List of items */
   delim=%str( )   /* Delimiter for list (def. blank char) */
   );
 
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %ListNoDup( A.B.C.D.E.B.F.A.C.G, delim=. )
+       returns unduplicated list A.B.C.D.E.F.G
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local ListNoDup scanlist item;
+    
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
   %if &delim = { or &delim = } %then %do;
-    %let Err1 = ER;
-    %let Err2 = ROR;
-    %put &Err1&Err2[ListNoDup]:  Curly braces { } cannot be used as list delimit
-ers.;
+    %err_mput( macro=ListNoDup, msg=Curly braces { } cannot be used as list delimiters. )
     %goto exit;
   %end;
 
   %if %index( &list, {{bol}} ) > 0 or %index( &list, {{eol}} ) > 0 %then %do;
-    %let Err1 = ER;
-    %let Err2 = ROR;
-    %put &Err1&Err2[ListNoDup]:  The text "{{bol}}" or "{{eol}}" must not appear
- in the list.;
+    %err_mput( macro=ListNoDup, msg=The text "{{bol}}" or "{{eol}}" must not appear in the list. )
     %goto exit;
   %end;
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
 
   %let ListNoDup = ;
   %let scanlist = {{bol}}&delim&list&delim{{eol}};
@@ -53,45 +66,50 @@ ers.;
 
   %exit:
 
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
 %mend ListNoDup;
 
-/** End Macro Definition **/
 
-/****** UNCOMMENT TO TEST MACRO ******
+/************************ UNCOMMENT TO TEST ***************************
 
-options mprint symbolgen mlogic;
+**options mprint symbolgen mlogic;
+
+filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
+options sasautos=(uiautos sasautos);
 
 %let list = A{B{C{D{E{B{F{A{C{G;
-%let undup = z%ListNoDup( &list, delim={ )z;
+%let undup = [%ListNoDup( &list, delim={ )];
 %put _user_;
 
 %let list = A B {{bol}} C D;
-%let undup = z%ListNoDup( &list )z;
+%let undup = [%ListNoDup( &list )];
 %put _user_;
 
 %let list = A.B.C.D.E.B.F.A.C.G;
-%let undup = z%ListNoDup( &list, delim=. )z;
+%let undup = [%ListNoDup( &list, delim=. )];
 %put _user_;
 
 %let list = .A.B.C.D.E.B.F.A.C.G.;
-%let undup = z%ListNoDup( &list, delim=. )z;
+%let undup = [%ListNoDup( &list, delim=. )];
 %put _user_;
 
 %let list = ..A...B.C..D.E.B.F.A.C.G;
-%let undup = z%ListNoDup( &list, delim=. )z;
+%let undup = [%ListNoDup( &list, delim=. )];
 %put _user_;
 
 %let list = A B C D E B F A C G;
-%let undup = z%ListNoDup( &list )z;
+%let undup = [%ListNoDup( &list )];
 %put _user_;
 
 %let list = %str(   A   B   C   D E B    F A  C   G   );
-%let undup = z%ListNoDup( &list )z;
+%let undup = [%ListNoDup( &list )];
 %put _user_;
 
 %let list = A B C AA AAA D E B AA F A C G AAAA;
-%let undup = z%ListNoDup( &list )z;
+%let undup = [%ListNoDup( &list )];
 %put _user_;
 
-/***********************************************/
+/**********************************************************************/
 
