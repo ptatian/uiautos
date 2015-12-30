@@ -1,24 +1,56 @@
-/* MCapitalize.sas - SAS Macro
- *
- * Autocall macro to capitalize the first letter of a macro text value.
- *
- * NB:  Program written for SAS Version 8.2
- *
- * 01/02/03  Peter A. Tatian
- ****************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: MCapitalize
 
-/** Macro MCapitalize - Start Definition **/
+ Description: Autocall macro returns macro text value with first letter 
+ capitalized and the rest lowercase. 
+ 
+ Use: Function
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro MCapitalize( s );
 
-  %upcase( %substr( &s, 1, 1 ) )%lowcase( %substr( &s, 2 ) )
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %MCapitalize( aBcDE )
+       Returns Abcde
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+  01/02/03  Peter A. Tatian
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+    
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+  
+  %if %length( &s ) > 1 %then %do;
+    %upcase( %substr( &s, 1, 1 ) )%lowcase( %substr( &s, 2 ) )
+  %end;
+  %else %do;
+    %upcase( &s )
+  %end;
+
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
 
 %mend MCapitalize;
 
-/** End Macro Definition **/
 
-
-/***** UNCOMMENT TO TEST MACRO *****
+/************************ UNCOMMENT TO TEST ***************************
 
 title "MCapitalize:  SAS Macro";
 
@@ -27,28 +59,30 @@ title "MCapitalize:  SAS Macro";
 filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
 options sasautos=(uiautos sasautos);
 
-options mprint symbolgen mlogic;
+**options mprint symbolgen mlogic;
 
-data _null_;
+%let str = ;
+%let cstr = %MCapitalize( &str );
+%put str=&str cstr=&cstr;
 
-  length str cstr $ 30;
+%let str = a;
+%let cstr = %MCapitalize( &str );
+%put str=&str cstr=&cstr;
 
-  input str $ 1 - 12;  
+%let str = Abcd Efgh;
+%let cstr = %MCapitalize( &str );
+%put str=&str cstr=&cstr;
 
-  cstr = %MCapitalize( str );
-  
-  put str= cstr=;
-  
-  cards;
-            
-a           
-A           
-Peter Tatian
-peter tatian
-PETER TATIAN
-pEtEr TaTiAn
-  ;
+%let str = abcd efgh;
+%let cstr = %MCapitalize( &str );
+%put str=&str cstr=&cstr;
 
-run;
+%let str = ABCD EFGH;
+%let cstr = %MCapitalize( &str );
+%put str=&str cstr=&cstr;
 
-/***** END MACRO TEST *****/
+%let str = aBcD eFgH;
+%let cstr = %MCapitalize( &str );
+%put str=&str cstr=&cstr;
+
+/**********************************************************************/
