@@ -1,26 +1,47 @@
-/************************************************************************
-* Program:  Note_put.sas
-* Project:  UI SAS Macro Library
-* Author:   P. Tatian
-* Updated:  10/28/04
-* Version:  SAS 8.2
-* 
-* Description:  Write a macro-generated note to the SAS LOG.
-*               Uses PUT
-*
-* Modifications:
-*  11/07/04 - If Macro= parameter blank, does not include [macroname] in
-*             message.  Reformatted to hide resolved NOTE label in LOG.
-*  09/07/05 - Reformatted so that message will be displayed in color
-*             in SAS Enhanced Editor.
-************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Note_put
 
-/** Macro Note_put - Start Definition **/
+ Description: Write a macro-generated note message to the SAS LOG
+ using PUT.
+ 
+ Use: Within data step
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro Note_put( 
   Macro=,    /* Macro name */
   Msg=       /* Note message */
   );
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Note_put( macro=MyMacro, Msg="This is a note." )
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   11/07/04 - If Macro= parameter blank, does not include [macroname] in
+              message.  Reformatted to hide resolved NOTE label in LOG.
+   09/07/05 - Reformatted so that message will be displayed in color
+              in SAS Enhanced Editor.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local SYL1 SYL2;
+    
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
 
   %let SYL1 = "NO";
   
@@ -35,5 +56,15 @@
 
 %mend Note_put;
 
-/** End Macro Definition **/
+
+/************************ UNCOMMENT TO TEST ***************************
+
+data _null_;
+
+  %Note_put( macro=MyMacro, Msg="This is a note." )
+
+run;
+
+/**********************************************************************/
+
 
