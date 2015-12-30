@@ -54,7 +54,7 @@
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %local _FMS i pos _ThisCat _Index1 _Index2 _ByVal;
+  %local _FMS i pos _ThisCat _Index1 _Index2 _ByVal NumCats;
   %global _NewFMS _Recurse;
 
   %if &C ne %str() %then %let Cat = &C;
@@ -69,7 +69,7 @@
     %do;
       %put ;
       %put %str(=====================================================================);
-      %put ERROR: No valid action requested.;
+      %err_mput( macro=FmtSearch, msg=No valid action requested. Cat=&Cat Action=&Action )
       %put %str(=====================================================================);
       %put ;
       %goto Finish;
@@ -157,7 +157,7 @@
       %end;
     %end;
 
-  %if &Status eq Y %then
+  %if %mparam_is_yes( &Status ) %then
     %do;
       %put; 
       %put %str(=====================================================================);
@@ -205,6 +205,10 @@
 /************************ UNCOMMENT TO TEST ***************************
 
 libname Test 'D:\';
+
+%FmtSearch( action=L )
+
+%FmtSearch( cat=Test, action=0 )
 
 %FmtSearch( cat=Test, action=E )
 
