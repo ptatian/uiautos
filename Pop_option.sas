@@ -32,7 +32,7 @@
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
   %global _&option._stack;
-  %local new_stack i opt;
+  %local new_stack i opt option_val;
 
    
   %***** ***** ***** ERROR CHECKS ***** ***** *****;
@@ -77,8 +77,6 @@
   
   %exit_macro:
   
-  %**put _user_;
-
 
   %***** ***** ***** CLEAN UP ***** ***** *****;
 
@@ -89,6 +87,7 @@
 
 
 filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
+
 options sasautos=(uiautos sasautos);
 
 *options mprint symbolgen mlogic;
@@ -106,12 +105,24 @@ options obs=10;
 options obs=0;
 %Push_option( obs )
 
+%put _user_;
+
 %Pop_option( obs )
+%put _user_;
+
 %Pop_option( obs )
+%put _user_;
+
 %Pop_option( obs )
+%put _user_;
+
+%Pop_option( obs )
+%put _user_;
 
 %Pop_option( mprint )
+%put _user_;
 
 %Pop_option( orientation )
+%put _user_;
 
 /**********************************************************************/
