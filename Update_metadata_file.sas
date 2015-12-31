@@ -1,43 +1,14 @@
-/* Update_metadata_file.sas - SAS Autocall Macro Library
- *
- * Registers metadata for a SAS data set.
- *
- * NB:  Program written for SAS Version 8.2
- *
- * Next steps:
- *  - Handle situation where file has no numeric unformatted vars
- *
- * 01/02/04  Peter A. Tatian
- * 09/02/04  Dealt with situation where data set has no formatted values
- *           Clean up temporary data sets at end of macro
- * 10/28/04  Checks that library is registered in metadata system.
- *           If not, exits macro without processing file.
- * 10/29/04  Macro will now create _files, _vars, _fval, and _history 
- *           metadata files if they do not already exist.
- * 11/10/04  Added max_fmt_vals= option to limit number of formatted values
- *           written to metadata for a variable (def=100/max=2000000).
- * 11/11/04  NOTE printed to log when max. no. formatted values surpassed.
- * 11/15/04  Added support for SAS data set views.
- * 12/20/04  Setting desc_stats= to blank will suppress descriptive stats
- *           for numeric variables.
- * 03/25/05  Implemented update_notify= option.
- * 05/06/05  Added file sorted by info to metadata.
- * 09/06/05  Set OPTIONS OBS=MAX to avoid data loss when updating metadata.
- *           Set NOMPRINT unless MPRINT=Y.
- * 12/06/06  Added ADD_EXCLUDE_FMTS= option to exclude additional, 
-             user-specified formats.
-   03/08/08  Updated excluded format list to all SAS 9.2 formats.
-   06/09/10  Write note to LOG for each email notification.
-   09/29/10  Corrected problem with long data set names.
-   02/23/11  PAT Added declaration for local macro vars.
-                 Changed name of local macro vars fvar* to _fvar*.
-   10/12/11  PAT Increased length of FileRevisions to 500.
-   11/09/13  PAT Revised for use with new SAS server setup.
-                 Added ds_lib_display=.
-                 Removed update_notify= functionality.
- ****************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Update_metadata_file
 
-/** Macro Update_metadata_file - Start Definition **/
+ Description: Registers metadata for a SAS data set.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro Update_metadata_file( 
          ds_lib=        /** Data set library reference **/,
@@ -53,10 +24,10 @@
          meta_lib=      /** Library reference for metadata data sets **/,
          meta_pre= meta /** Prefix for metadata data set names **/,
          update_notify= /** FUNCTION DISABLED **/,
-         quiet=N,
-         debug=N,
-         mprint=N,
-         add_exclude_fmts="",
+         quiet=N,       /** Suppress LOG messages **/
+         debug=N,       /** Print extra debugging information **/
+         mprint=N,      /** Print resolved macro code to LOG **/
+         add_exclude_fmts="",  /** Additional user-defined formats to exclude from value pages **/
          exclude_fmts= 
           "/$ASCII/$BIDI/$BINARY/$CHAR/$CPTDW/$CPTWD/$EBCDIC/$HEX/$KANJI/$KANJIX/$LOGVS/" ||
           "/$LOGVSR/$MSGCASE/$OCTAL/$QUOTE/$REVERJ/$REVERS/$UCS2B/$UCS2BE/$UCS2L/$UCS2LE/$UCS2X/" ||
@@ -92,31 +63,79 @@
           "/YYQR/" ||
           "/YYQRC/YYQRD/YYQRN/YYQRP/YYQRS/" ||
           "/Z/ZD/"
-          
+          /** SAS-defined formats to exlude from value pages **/
        );
 
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %{macro name}(  )
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   01/02/04  Peter A. Tatian
+   09/02/04  Dealt with situation where data set has no formatted values
+             Clean up temporary data sets at end of macro
+   10/28/04  Checks that library is registered in metadata system.
+             If not, exits macro without processing file.
+   10/29/04  Macro will now create _files, _vars, _fval, and _history 
+             metadata files if they do not already exist.
+   11/10/04  Added max_fmt_vals= option to limit number of formatted values
+             written to metadata for a variable (def=100/max=2000000).
+   11/11/04  NOTE printed to log when max. no. formatted values surpassed.
+   11/15/04  Added support for SAS data set views.
+   12/20/04  Setting desc_stats= to blank will suppress descriptive stats
+             for numeric variables.
+   03/25/05  Implemented update_notify= option.
+   05/06/05  Added file sorted by info to metadata.
+   09/06/05  Set OPTIONS OBS=MAX to avoid data loss when updating metadata.
+             Set NOMPRINT unless MPRINT=Y.
+   12/06/06  Added ADD_EXCLUDE_FMTS= option to exclude additional, 
+             user-specified formats.
+   03/08/08  Updated excluded format list to all SAS 9.2 formats.
+   06/09/10  Write note to LOG for each email notification.
+   09/29/10  Corrected problem with long data set names.
+   02/23/11  PAT Added declaration for local macro vars.
+                 Changed name of local macro vars fvar* to _fvar*.
+   10/12/11  PAT Increased length of FileRevisions to 500.
+   11/09/13  PAT Revised for use with new SAS server setup.
+                 Added ds_lib_display=.
+                 Removed update_notify= functionality.
+
+   Next steps:
+    - Handle situation where file has no numeric unformatted vars
+  
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
   %local sortvars SAS_DATASET_VIEW lib_exists ds_name25 allfvar i em num_fval_vars;
 
   %let SAS_DATASET_VIEW = "SASDSV";
-  
+    
   %** If not specified, use ds_lib value as ds_lib_display **;
   
   %if &ds_lib_display = %then %let ds_lib_display = &ds_lib;
   
   %** Save current MPRINT setting and reset based on MPRINT= parameter **;
   
-  %let mprint = %upcase( &mprint );
-  
   %Push_option( mprint )
   
-  %if &mprint = Y %then %do;
+  %if %mparam_is_yes( &mprint ) %then %do;
     options mprint;
   %end;
   %else %do;
     options nomprint;
   %end;
   
-  ** Force step boundary **;
+  %** Shorter file name for temporary data sets **;
+  
+  %if %length( &ds_name ) > 25 %then %let ds_name25 = %substr( &ds_name, 1, 25 );
+  %else %let ds_name25 = &ds_name;
+  
+  %** Force step boundary **;
   
   run;
   
@@ -127,14 +146,17 @@
   options obs=max;
   %Note_mput( macro=Update_metadata_file, msg=OPTIONS OBS set to MAX for metadata processing. )
 
-  ** Check for existence of library metadata file **;
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+  %** Check for existence of library metadata file **;
   
   %if not %Dataset_exists( &meta_lib..&meta_pre._libs, quiet=n ) %then %do;
     %Err_mput( macro=Update_metadata_file, msg=File &meta_lib..&meta_pre._libs does not exist. )
     %goto exit_err;
   %end;
 
-  ** Check that library is registered **;
+  %** Check that library is registered **;
   
   %Data_to_format( 
     FmtName=$libchk, 
@@ -153,7 +175,7 @@
     %goto exit_err;
   %end;
   
-  ** Check for existence of data set to be registered **;
+  %** Check for existence of data set to be registered **;
   
   %if not ( %Dataset_exists( &ds_lib..&ds_name, quiet=n, memtype=data ) or
             %Dataset_exists( &ds_lib..&ds_name, quiet=n, memtype=view ) ) %then %do;
@@ -161,16 +183,14 @@
     %goto exit_err;
   %end;
 
-  %** Shorter file name for temporary data sets **;
-  
-  %if %length( &ds_name ) > 25 %then %let ds_name25 = %substr( &ds_name, 1, 25 );
-  %else %let ds_name25 = &ds_name;
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
   
   ** Get data set contents **;
   
   proc contents data=&ds_lib..&ds_name out=_cnts_&ds_name25 noprint;
  
-  %if %upcase( &debug ) = Y %then %do;
+  %if %mparam_is_yes( &debug ) %then %do;
     proc contents data=_cnts_&ds_name25;
       title2 "File = _cnts_&ds_name25";
     proc print data=_cnts_&ds_name25;
@@ -203,11 +223,6 @@
   proc sort data=_cnts_&ds_name25;
     by name;
 
- /*
-  proc sort data=&_compile_num_desc_out;
-    by _name_;
- */
-  
   data _info_&ds_name25;
   
     %if %length( &desc_stats ) > 0 %then %do;
@@ -231,7 +246,7 @@
 
   run;
   
-  %if %upcase( &debug ) = Y %then %do;
+  %if %mparam_is_yes( &debug ) %then %do;
     proc print data=_info_&ds_name25 (obs=10);
       title2 "File = _info_&ds_name25";
     run;
@@ -286,8 +301,9 @@
     
     if _n_ = 1 then do;
     
-      if memlabel = "" then 
-        put "WARN" "ING[Update_metadata_file]:  Data set &ds_name not labeled.";
+      if memlabel = "" then do;
+        %warn_put( macro=Update_metadata_file, msg="Data set &ds_name not labeled." )
+      end;
         
       MetadataUpdated = datetime();
       
@@ -355,7 +371,7 @@
   proc sort data=_v_&ds_name25;
     by Library FileName VarNameUC;
   
-  %if %upcase( &debug ) = Y %then %do;
+  %if %mparam_is_yes( &debug ) %then %do;
 
     proc print data=_f_&ds_name25;
       format FileRestrict $40.;
@@ -396,7 +412,7 @@
       %let allfvar = &allfvar &&_fvar&i;
     %end;
     
-    %if %upcase( &debug ) = Y %then %do;
+    %if %mparam_is_yes( &debug ) %then %do;
       %put num_fval_vars=&num_fval_vars;
       %put allfvar=&allfvar;
     %end;
@@ -405,7 +421,7 @@
       var_list = &allfvar,
       out_data = _fvals_&ds_name25 )
 
-    %if %upcase( &debug ) = Y %then %do;
+    %if %mparam_is_yes( &debug ) %then %do;
       proc print data=_fvals_&ds_name25;
         title2 "File = _fvals_&ds_name25";
       run;
@@ -460,7 +476,7 @@
       
     run;
     
-    %if %upcase( &debug ) = Y %then %do;
+    %if %mparam_is_yes( &debug ) %then %do;
       proc print data=_fv_&ds_name25;
         title2 "File = _fv_&ds_name25";
       run;
@@ -639,7 +655,7 @@
     
   %end;
   
-  %if %upcase( &debug ) = Y %then %do;
+  %if %mparam_is_yes( &debug ) %then %do;
   
     proc contents data=&meta_lib..&meta_pre._files;
       title2 "File = &meta_lib..&meta_pre._files";
@@ -695,6 +711,9 @@
   
   ********************************/
   
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
   ** Clean up all temporary files **;
   
   proc datasets library=WORK memtype=(data) nolist nowarn;
@@ -718,9 +737,74 @@
   %Pop_option( obs )
   %Pop_option( mprint )
   
+
   %Note_mput( macro=Update_metadata_file, msg=Macro Update_metadata_file() exiting. )
 
 %mend Update_metadata_file;
 
-/** End Macro Definition **/
 
+
+/************************ UNCOMMENT TO TEST ***************************
+
+** Autocall macros **;
+
+filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
+options sasautos=(uiautos sasautos);
+
+proc format library=work;
+  value $region
+    "Africa" = "~Africa"
+    "Asia" = "~Asia"
+    "Canada" = "~Canada"
+    "Central America/Caribbean" = "~Central America/Caribbean"
+    "Eastern Europe" = "~Eastern Europe"
+    "Middle East" = "~Middle East"
+    "Pacific" = "~Pacific"
+    "South America" = "~South America"
+    "United States" = "~United States"
+    "Western Europe" = "~Western Europe";
+    
+data Shoes;
+
+  set Sashelp.shoes;
+  
+  format region $region.;
+  
+run;
+
+%File_info( data=shoes, freqvars=region )
+
+%Update_metadata_file( 
+         ds_lib=Work,
+         ds_name=Shoes,
+         creator=SAS Institute,
+         creator_process=SAS Institute,
+         revisions=Test file.,
+         meta_lib=work
+      )
+
+%Update_metadata_library( 
+         lib_name=Work,
+         lib_desc=Test library,
+         meta_lib=work
+      )
+
+%Update_metadata_file( 
+         ds_lib=Work,
+         ds_name=Shoes,
+         creator=SAS Institute,
+         creator_process=SAS Institute,
+         revisions=Test file.,
+         meta_lib=work,
+         mprint=y
+      )
+
+proc datasets library=work memtype=(data);
+quit;
+
+%File_info( data=Meta_files, printobs=50, contents=n, stats= )
+%File_info( data=Meta_vars, printobs=50, contents=n, stats= )
+%File_info( data=Meta_fval, printobs=50, contents=n, stats= )
+%File_info( data=Meta_history, printobs=50, contents=n, stats= )
+
+/**********************************************************************/
