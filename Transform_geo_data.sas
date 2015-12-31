@@ -57,7 +57,7 @@
          wgt_org_geo = geo_in,
          wgt_new_geo = geo_out,
          wgt_id_vars = alt_id,
-         wgt_wgt_var = wt,
+         wgt_count_var = wt,
          wgt_prop_var = wt,
          out_ds_name = Test_out,
          out_ds_label = Transform_geo_data macro test output data set
@@ -98,7 +98,10 @@
     
      NOTES:
        The weighting file is assumed to be normalized, that is, the values
-       of the weight variable must sum to 1 for each value of &wgt_org_geo.
+       of the count weight variable (wgt_count_var=) must sum to 1 for each value of 
+       the original geography variable (wgt_org_geo=).
+       Values of the proportion weight variable (wgt_prop_var=) must average to 1 for each
+       value of the original geography variable (wgt_org_geo=).
     
        Neither the weight file nor the input file must be sorted.
     
