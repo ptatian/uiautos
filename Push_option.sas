@@ -1,21 +1,45 @@
-/* Push_option.sas - UI SAS Autocall Macro Library
- *
- * Push specified SAS system option unto top of stack for later
- * recovery through %Pop_option macro.
- *
- * NB:  Program written for SAS Version 8.2
- *
- * 09/06/05  Peter A. Tatian
- ****************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Push_option
 
-/** Macro Push_macro - Start Definition **/
+ Description: Push specified SAS system option unto top of stack for later
+ recovery through %Pop_option macro.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
-%macro Push_option( option, quiet=N );
+%macro Push_option( 
+  option, 
+  quiet=N 
+  );
 
-  %**put _user_;
-  
-  %let quiet = %upcase(&quiet);
-  
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Push_option( obs )
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   09/06/05  Peter A. Tatian
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local option_val;
+    
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+
   %let option_val = %sysfunc(getoption(&option,keyword));
   
   %if &option_val = %then %do;
@@ -29,39 +53,44 @@
   
   %* %put _&option._stack=&&&_&option._stack;
   
-  %if &quiet = N %then %do;
+  %if not %mparam_is_yes( &quiet ) %then %do;
     %note_mput( macro=Push_option, msg=System option %upcase(&option_val) saved. )
   %end;
   
   %exit_macro:
   
-  %**put _user_;
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
 
 %mend Push_option;
 
-/** End Macro Definition **/
 
-/********** UNCOMMENT TO TEST **************************
+/************************ UNCOMMENT TO TEST ***************************
 
-filename uidev "D:\Projects\UISUG\MacroDev";
 filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
-options sasautos=(uidev uiautos sasautos);
+options sasautos=(uiautos sasautos);
 
 options mprint;
 
 %Push_option( mprint )
+%put _user_;
 
 %Push_option( obs )
+%put _user_;
+
 options obs=10;
 %Push_option( obs, quiet=y )
+%put _user_;
+
 options obs=0;
 %Push_option( obs )
+%put _user_;
 
 %Push_option( invalidoption )
+%put _user_;
 
 options nomprint;
-
 %Push_option( mprint )
+%put _user_;
 
-/********************************************************/
-
+/**********************************************************************/
