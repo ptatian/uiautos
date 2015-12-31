@@ -1,19 +1,14 @@
-/************************************************************************
- * Program:  ListIntersect.sas
- * Project:  UI SAS Macro Library
- * Author:   P. Tatian
- * Updated:  8/23/04
- * Version:  SAS 8.12
- * Environment:  Windows or Alpha
- * Use:      Within statement
- * 
- * Description:  Autocall macro to intersect entries from two lists.
- *
-   Modifications:
-   02/23/11  PAT  Added declaration for local macro vars.
- ************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: ListIntersect
 
-/** Macro ListIntersect - Start Definition **/
+ Description: Autocall macro returns the intersection of two lists.
+ 
+ Use: Function
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro ListIntersect(
   list1,           /* List of items #1 */
@@ -21,8 +16,31 @@
   delim=%str( )    /* Delimiter for list (def. blank char) */
   );
   
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %ListIntersect( A B C D, C D E F )
+       returns C D, which is intersection of A B C D and C D E F
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   02/23/11  PAT  Added declaration for local macro vars.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
   %local ListIntersect scanlist1 scanlist2 i item;
   
+   
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+
   %let list1 = %ListNoDup( &list1, delim=&delim );
   %let list2 = %ListNoDup( &list2, delim=&delim );
 
@@ -49,29 +67,29 @@
 
   %exit:
 
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
 %mend ListIntersect;
 
-/** End Macro Definition **/
 
-
-/****** UNCOMMENT TO TEST MACRO ******
+/************************ UNCOMMENT TO TEST ***************************
 
 options mprint nosymbolgen nomlogic;
 
 ** Autocall macros **;
 
-filename automac "K:\Metro\PTatian\UISUG\Uiautos\";
-options sasautos=(automac sasautos);
+filename uiautos "K:\Metro\PTatian\UISUG\Uiautos\";
+options sasautos=(uiautos sasautos);
 
 %let list1 = Z A B C X Y E Y Z F G X;
 %let list2 = A B C D W X Y Z;
-%let result = z%ListIntersect( &list1, &list2 )z;
+%let result = [%ListIntersect( &list1, &list2 )];
 %put _user_;
 
 %let list1 = A B C D E F G;
 %let list2 = W X Y Z;
-%let result = z%ListIntersect( &list1, &list2 )z;
+%let result = [%ListIntersect( &list1, &list2 )];
 %put _user_;
 
-/***********************************************/
-
+/**********************************************************************/
