@@ -1,15 +1,15 @@
-/* Super_transpose.sas - UI SAS Macro Library
- *
- * Autocall macro that performs transpose on a series of vars in a
- * data set and combines results together into a single file.
- *
- * NB:  Program written for SAS Version 8.2
- *
- * 06/24/06  Peter A. Tatian
-   02/23/11  PAT  Added declaration for local macro vars.
- ****************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Super_transpose
 
-/** Macro Super_transpose - Start Definition **/
+ Description: Autocall macro that performs transpose on a series of vars in a
+ data set and combines results together into a single file.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro Super_transpose(  
   data= ,     /** Input data set **/
@@ -20,17 +20,48 @@
   mprint=N    /** Print macro code to LOG (Y/N) **/
 );
 
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Super_transpose(
+       data=Test,
+       out=Test_res,
+       id=idvar,
+       by=byvar,
+       var=var1 var2
+     )
+    transposes data set Test variables var1 and var2 using idvar
+    to define variable names and byvar to define observations.
+    result is saved to data set Test_res.
+
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   06/24/06  Peter A. Tatian
+   02/23/11  PAT  Added declaration for local macro vars.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
   %local i tvar files j val;
+  
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
 
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+  
   %Note_mput( macro=Super_transpose, msg=Macro starting. )
-
-  %let mprint = %upcase( &mprint );
 
   %** Save current MPRINT setting and reset based on MPRINT= parameter **;
 
   %Push_option( mprint )
 
-  %if &mprint = Y %then %do;
+  %if %mparam_is_yes( &mprint ) %then %do;
     options mprint;
   %end;
   %else %do;
@@ -141,18 +172,21 @@
   
   %exit:
 
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
   %** Restore system options **;
 
   %Pop_option( mprint )
+
 
   %Note_mput( macro=Super_transpose, msg=Macro exiting. )
 
 %mend Super_transpose;
 
-/** End Macro Definition **/
 
 
-/********** UNCOMMENT TO TEST *************
+/************************ UNCOMMENT TO TEST ***************************
 
 options nocenter;
 
@@ -198,4 +232,4 @@ run;
 
 %File_info( data=Test_res, stats=, printobs=10  )
 
-/******** END OF TEST CODE *****************************/
+/**********************************************************************/
