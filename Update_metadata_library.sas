@@ -1,33 +1,58 @@
-/* Update_metadata_library.sas - SAS Autocall Macro Library
- *
- * Registers metadata for a SAS library.
- *
- * NB:  Program written for SAS Version 8.2
- *
- * 01/02/04  Peter A. Tatian
- * 
- * Modifications:
- * 10/29/04  Macro now will create _libs file if it does not exist.
- * 09/06/05  Set OPTIONS OBS=MAX to avoid data loss when updating metadata.
-   09/29/10  PAT  Delete temporary data set at end of macro execution.
- ****************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Update_metadata_library
 
-/** Macro Update_metadata_library - Start Definition **/
+ Description: Registers metadata for a SAS library.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro Update_metadata_library( 
-         lib_name= ,
-         lib_desc= ,
-         meta_lib= ,
-         meta_pre= meta,
-         quiet=N
+         lib_name= ,       /** Library reference **/
+         lib_desc= ,       /** Library description **/
+         meta_lib= ,       /** Library reference for metadata data sets **/
+         meta_pre= meta,   /** Prefix for metadata data set names **/
+         quiet=N           /** Suppress notes to LOG (Y/N) **/
        );
 
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Update_metadata_library( 
+              lib_name=Sashelp,
+              lib_desc=SAS help library,
+              meta_lib=metadata
+           )
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   01/02/04  Peter A. Tatian
+   10/29/04  Macro now will create _libs file if it does not exist.
+   09/06/05  Set OPTIONS OBS=MAX to avoid data loss when updating metadata.
+   09/29/10  PAT  Delete temporary data set at end of macro execution.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
   %** Save current OBS= setting then set to MAX **;
 
   %Push_option( obs )
   
   options obs=max;
   %Note_mput( macro=Update_metadata_library, msg=OPTIONS OBS set to MAX for metadata processing. )
+
+
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
 
   ** Create library record **;
   
@@ -82,50 +107,43 @@
   
   %exit:
 
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
   %** Restore system options **;
   
   %Pop_option( obs )
+
 
   %Note_mput( macro=Update_metadata_library, msg=Macro exiting. )
     
 %mend Update_metadata_library;
 
-/** End Macro Definition **/
 
 
-/******************** UNCOMMENT TO TEST MACRO ********************
-
-libname general v8 "D:\Projects\DCNIS\Data\General";
-libname health v8 "D:\Projects\DCNIS\Data\Health";
-libname ipums v8 "D:\DCData\Libraries\IPUMS\Data";
-libname meta v8 "D:\Projects\UISUG\Data";
-
-options mprint nosymbolgen nomlogic;
+/************************ UNCOMMENT TO TEST ***************************
 
 ** Autocall macros **;
 
-filename uidev "D:\Projects\UISUG\MacroDev";
-filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
-options sasautos=(uidev uiautos sasautos);
+***filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
+filename uiautos "C:\Projects\UISUG\Uiautos\";
+options sasautos=(uiautos sasautos);
 
 %Update_metadata_library( 
-         lib_name= ipums,
-         lib_desc= Census/Integrated Public Microdata Sample (IPUMS),
-         meta_lib= meta
-       )
+         lib_name=Work,
+         lib_desc=Test library,
+         meta_lib=work
+      )
 
 %Update_metadata_library( 
-         lib_name= general,
-         lib_desc= General purpose data files,
-         meta_lib= meta
-       )
+         lib_name=Sashelp,
+         lib_desc=SAS help library,
+         meta_lib=work
+      )
 
-%Update_metadata_library( 
-         lib_name= health,
-         lib_desc= Births and deaths from State Center for Health Statistics,
-         meta_lib= meta
-       )
+proc datasets library=work memtype=(data);
+quit;
 
-%File_info( data=meta.meta_libs, stats= )
+%File_info( data=Meta_libs, printobs=50, contents=n, stats= )
 
-/*********************************************************/
+/**********************************************************************/
