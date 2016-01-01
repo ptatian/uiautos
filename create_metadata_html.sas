@@ -52,6 +52,9 @@
               html_title= NeighborhoodInfo DC Metadata -,
               html_stylesht= metadata_style.css
             )
+         create metadata HTML pages in folder L:\Metadata\
+         Format $creator is used to convert FileCreator initials to 
+         full names.
 
   *********************************************************************/
 

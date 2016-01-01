@@ -20,6 +20,7 @@
    
    SAMPLE CALL: 
      %Dataset_exists( Dat.MyFile, Quiet=N )
+       returns true (1) if data set Dat.Myfile exists, false (0) otherwise
 
   *********************************************************************/
 

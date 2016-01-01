@@ -26,6 +26,7 @@
               lib_desc=SAS help library,
               meta_lib=metadata
            )
+         registers the library SASHELP with the metadata system
 
   *********************************************************************/
 

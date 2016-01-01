@@ -69,7 +69,15 @@
   /*************************** USAGE NOTES *****************************
    
    SAMPLE CALL: 
-     %{macro name}(  )
+     %Update_metadata_file( 
+              ds_lib=Dat,
+              ds_name=Shoes,
+              creator=SAS Institute,
+              creator_process=Shoes.sas,
+              revisions=New file.,
+              meta_lib=metadata
+           )
+         registers the data set Dat.Shoes in the metadata system
 
   *********************************************************************/
 

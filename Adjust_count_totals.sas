@@ -33,6 +33,7 @@
        debug=y,
        quiet=n
      )
+     adjusts count vars a b c and d so that their sum equals total 
 
   *********************************************************************/
 

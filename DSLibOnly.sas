@@ -17,6 +17,7 @@
    
    SAMPLE CALL: 
      %DSLibOnly( Libname.Dataset )
+       returns Libname
 
   *********************************************************************/
 

@@ -24,6 +24,8 @@
    
    SAMPLE CALL: 
      %dollar_convert( amount, year2000, 1980, 2000, series=CUUR0000SA0L2 )
+       converts dollar values in AMOUNT from 1980 to 2000 dollars using
+       CPI/All items less shelter and saves new values in var YEAR2000
 
    NOTES:
     - Dollar_Convert uses both positional and definitional parameters. 

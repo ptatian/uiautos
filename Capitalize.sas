@@ -18,6 +18,7 @@
    
    SAMPLE CALL: 
      %capitalize( "URBAN INSTITUTE" )
+       returns string value "Urban institute"
 
   *********************************************************************/
 

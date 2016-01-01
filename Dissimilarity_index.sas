@@ -26,6 +26,8 @@
    
    SAMPLE CALL: 
      %Dissimilarity_index( data=Test, varA=A, varB=B, by=geo, out=Result )
+       calculates dissimilarity index for populations A and B for units
+       defined by var GEO, results saved to Result data set
 
   *********************************************************************/
 

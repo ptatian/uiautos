@@ -30,6 +30,13 @@
        ds_name=Test,
        var_list=a b
      )
+     calculates n, mean, std, min, and max of variables
+     a and b and saves them in new data set work._desc_test.
+     one observation in output data set for each input variable.
+     Variables in output data set are _name_ (name of input var), 
+     and _desc_n, _desc_mean, etc.
+     Default is to put statistics in data set WORK._DESC_&ds_name.
+     Output data set name is saved in global macro var _compile_num_desc_out.
 
   *********************************************************************/
 
@@ -131,9 +138,8 @@ title "Compile_num_desc:  SAS Macro";
 
 ** Autocall macros **;
 
-filename macrodev "D:\Projects\UISUG\MacroDev";
 filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
-options sasautos=(macrodev uiautos sasautos);
+options sasautos=(uiautos sasautos);
 
 options mprint nosymbolgen nomlogic;
 
@@ -173,5 +179,8 @@ run;
 proc print data=&_compile_num_desc_out;
   title2 "File = &_compile_num_desc_out";
 run;
+
+proc datasets library=work memtype=(data);
+quit;
 
 /**********************************************************************/

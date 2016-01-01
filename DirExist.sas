@@ -20,6 +20,8 @@
    
    SAMPLE CALL: 
      %DirExist( K:\Metro\PTatian\UISUG\Uiautos )
+       returns true (1) if folder K:\Metro\PTatian\UISUG\Uiautos exists,
+       false (0) otherwise
 
   *********************************************************************/
 
