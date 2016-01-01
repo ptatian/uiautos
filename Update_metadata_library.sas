@@ -125,8 +125,7 @@
 
 ** Autocall macros **;
 
-***filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
-filename uiautos "C:\Projects\UISUG\Uiautos\";
+filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
 options sasautos=(uiautos sasautos);
 
 %Update_metadata_library( 
