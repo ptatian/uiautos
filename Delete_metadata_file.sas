@@ -26,6 +26,7 @@
               ds_name= Birth_1998_geo00,
               meta_lib= meta
        )
+       deletes all metadata for data set Health.Birth_1998_geo00
 
   *********************************************************************/
 
@@ -130,3 +131,86 @@
 %mend Delete_metadata_file;
 
 
+/************************ UNCOMMENT TO TEST ***************************
+
+** Autocall macros **;
+
+filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
+options sasautos=(uiautos sasautos);
+
+proc format library=work;
+  value $region
+    "Africa" = "~Africa"
+    "Asia" = "~Asia"
+    "Canada" = "~Canada"
+    "Central America/Caribbean" = "~Central America/Caribbean"
+    "Eastern Europe" = "~Eastern Europe"
+    "Middle East" = "~Middle East"
+    "Pacific" = "~Pacific"
+    "South America" = "~South America"
+    "United States" = "~United States"
+    "Western Europe" = "~Western Europe";
+    
+data Shoes;
+
+  set Sashelp.shoes;
+  
+  format region $region.;
+  
+run;
+
+data Class;
+
+  set Sashelp.class;
+  
+  label
+    Age = "Age (years)";
+
+run;
+
+%Update_metadata_library( 
+         lib_name=Work,
+         lib_desc=Test library,
+         meta_lib=work
+      )
+
+%Update_metadata_file( 
+         ds_lib=Work,
+         ds_name=Shoes,
+         creator=SAS Institute,
+         creator_process=SAS Institute,
+         revisions=Test file.,
+         meta_lib=work
+      )
+
+%Update_metadata_file( 
+         ds_lib=Work,
+         ds_name=Class,
+         creator=SAS Institute,
+         creator_process=SAS Institute,
+         revisions=Test file #2.,
+         meta_lib=work
+      )
+
+proc datasets library=work memtype=(data);
+quit;
+
+title1 "BEFORE FILE DELETE";
+%File_info( data=Meta_files, printobs=50, contents=n, stats= )
+%File_info( data=Meta_vars, printobs=50, contents=n, stats= )
+%File_info( data=Meta_fval, printobs=50, contents=n, stats= )
+%File_info( data=Meta_history, printobs=50, contents=n, stats= )
+
+%Delete_metadata_file( 
+         ds_lib= Work,
+         ds_name= Shoes,
+         meta_lib= work
+  )
+
+title1 "AFTER FILE DELETE";
+%File_info( data=Meta_files, printobs=50, contents=n, stats= )
+%File_info( data=Meta_vars, printobs=50, contents=n, stats= )
+%File_info( data=Meta_fval, printobs=50, contents=n, stats= )
+%File_info( data=Meta_history, printobs=50, contents=n, stats= )
+
+/**********************************************************************/

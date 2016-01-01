@@ -11,9 +11,9 @@
 ***********************************************************************/
 
 %macro Delete_metadata_library(  
-         ds_lib= ,
-         meta_lib= ,
-         meta_pre= meta
+         ds_lib= ,        /** Library reference **/
+         meta_lib= ,      /** Metadata library reference **/
+         meta_pre= meta   /** Metadata data set name prefix **/
   );
   
   /*************************** USAGE NOTES *****************************
@@ -23,13 +23,14 @@
               ds_lib= Health,
               meta_lib= meta
        )
+       deletes metadata record for Health library
 
    NOTES:
    - This macro deletes the record for a library from the metadata system.
    - However, it does NOT delete the records for any files associated
      with that library. 
-   - Use the %Delete_metadata_file() macro to remove any files
-     associated with the library BEFORE using %Delete_metadata_library().
+   - BEFORE using %Delete_metadata_library() use %Delete_metadata_file() 
+     macro to remove any files associated with the library.
 
   *********************************************************************/
 
@@ -115,3 +116,36 @@
 
 %mend Delete_metadata_library;
 
+
+/************************ UNCOMMENT TO TEST ***************************
+
+** Autocall macros **;
+
+filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
+options sasautos=(uiautos sasautos);
+
+%Update_metadata_library( 
+         lib_name=Work,
+         lib_desc=Test library,
+         meta_lib=work
+      )
+
+%Update_metadata_library( 
+         lib_name=Sashelp,
+         lib_desc=SAS help library,
+         meta_lib=work
+      )
+
+%File_info( data=Meta_libs, printobs=50, contents=n, stats= )
+
+%Delete_metadata_library( 
+         ds_lib=Sashelp,
+         meta_lib=work
+      )
+
+%File_info( data=Meta_libs, printobs=50, contents=n, stats= )
+
+proc datasets library=work memtype=(data);
+quit;
+
+/**********************************************************************/
