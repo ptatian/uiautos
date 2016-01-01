@@ -38,6 +38,10 @@
        Label=ANC2012_name,
        OtherLabel="Not a valid ANC"
        )
+       create format $anc12a in General.Formats catalog that converts
+       values given by var ANC2012 to labels in var ANC2012_name from
+       data set General.ANC2012.
+       Values not found in ANC2012 will be labeled "Not a valid ANC"
   
   *********************************************************************/
 
@@ -52,6 +56,8 @@
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
+  %local type fmtcat;
+  
   %Note_mput( macro=Data_to_format, msg=Starting macro. )
 
     
@@ -197,3 +203,43 @@
 %mend Data_to_format;
 
 
+/************************ UNCOMMENT TO TEST ***************************
+
+filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
+options sasautos=(uiautos sasautos);
+
+options mprint nosymbolgen nomlogic;
+
+data A;
+
+  input v $ 1 v_lbl $ 3-9;
+  
+datalines;
+A Label A
+B Label B
+C Label C
+;
+
+run;
+
+proc print data=A;
+
+%Data_to_format(
+  FmtLib=work,
+  FmtName=$test,
+  Desc="Test format",
+  Data=A,
+  Value=v,
+  Label=v_lbl,
+  OtherLabel="Not a valid value",
+  DefaultLen=.,
+  MaxLen=.,
+  MinLen=.,
+  Print=Y,
+  Contents=Y
+  )
+
+proc datasets library=work;
+quit;
+
+/**********************************************************************/
