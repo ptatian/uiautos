@@ -1,18 +1,15 @@
-/************************************************************************
-  Program:  MacroSearch.sas
-  Project:  UI SAS Macro Library
-  Author:   P. Tatian
-  Updated:  8/17/04
-  Version:  SAS 8.12
-  Environment:  Windows or Alpha
-  Use in:  Open code
-  
-  Description:  Autocall macro to manage multiple SAS macro libraries.
-    Adapted from FmtSearch by Pete Lund.
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
  
-  Modifications:
-   11/02/13 PAT Used compbl() on _NEWFMS before checking for pos of DEF.
- ************************************************************************/
+ Macro: MacroSearch
+
+ Description: Autocall macro to manage multiple SAS macro libraries.
+ Adapted from FmtSearch by Pete Lund.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro MacroSearch(
   Action=M,     /* Action:
@@ -25,32 +22,66 @@
                     L = Display current search list (no changes)
                 */
   A=,           /* Alternate name for Action= */
-  Cat=,         /* Macro library name */
+  Cat=,         /* Macro library filename */
   C=,           /* Alternate name for Cat= */
   Status=Y,     /* Display status after changes (def. Y) */
   Def=SASAUTOS  /* Default libraries, only used with Action=M or X 
                    (def. SASAUTOS) */
   );
   
-  %local _FMS i pos _ThisCat _Index1 _Index2 _ByVal;
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %MacroSearch( cat=Test, action=E )
+       adds Test to end of autocall macro library search
+
+    macro variables/parameters
+      Cat (C):    name of the macro library filename
+      Action (A): What do you want to do with the library filename:
+         B = put it at the beginning of the format search list,
+             even before default libraries
+         E = put it at the end of the library search list
+         D = remove it from the library search list
+         M = put it in the "middle" of the library search list.  It
+             will go after default libraries and before
+             any user-defined libraries in the search list.
+         L = simply lists the current macro library search list
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   11/02/13 PAT Used compbl() on _NEWFMS before checking for pos of DEF.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local _FMS i pos _ThisCat _Index1 _Index2 _ByVal NumCats;
   %local _NewFMS;
-  
+    
   %if &C ne %str() %then %let Cat = &C;
   %if &A ne %str() %then %let Action = &A;
   %let Action = %upcase(&Action);
   %if &Def ne %str() %then %let Def = %upcase( %sysfunc(compbl(&Def)) );
+
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
 
   %if %index(BMEDXLZ,&Action) eq 0 or
       %length(&Action) ne 1 %then
     %do;
       %put ;
       %put %str(=====================================================================);
-      %put ERROR: No valid action requested.;
+      %err_mput( macro=MacroSearch, msg=No valid action requested. Cat=&Cat Action=&Action )
       %put %str(=====================================================================);
       %put ;
       %goto Finish;
     %end;
 
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+  
   %if &Cat eq %str() and &Action ne L and &Action ne X and &Action ne Z %then
     %do;
       %put Here%str(%')s a list:;
@@ -123,7 +154,7 @@
       %end;
     %end;
 
-  %if &Status eq Y %then
+  %if %mparam_is_yes( &Status ) %then
     %do;
       %put; 
       %put %str(=====================================================================);
@@ -137,4 +168,24 @@
     %end;
 
   %Finish:
+
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
 %mend MacroSearch;
+
+
+/************************ UNCOMMENT TO TEST ***************************
+
+filename Test 'D:\';
+
+%MacroSearch( action=L )
+
+%MacroSearch( cat=Test, action=0 )
+
+%MacroSearch( cat=Test, action=E )
+
+%put _global_;
+
+/**********************************************************************/
+

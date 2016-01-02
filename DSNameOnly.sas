@@ -1,27 +1,55 @@
-/* DSNameOnly.sas - UI SAS Macro Library
- *
- * Autocall macro that returns the data set name portion of a
- * libname.dataset specification.
- *
- * NB:  Program written for SAS Version 9.1
- *
- * 08/27/06  Peter A. Tatian
- ****************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: DSNameOnly
 
-/** Macro DSNameOnly - Start Definition **/
+ Description: Autocall macro that returns the data set name portion of a
+ libname.dataset specification.
+ 
+ Use: Function
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro DSNameOnly( LibDataSpec );
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %DSNameOnly( Libname.Dataset )
+       returns Dataset
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local dot Ret;
+    
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
 
   %let dot = %sysfunc( indexc( &LibDataSpec, '.' ) );
   
   %let Ret = %sysfunc( substr( &LibDataSpec, &dot + 1 ) );
   &Ret
 
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+
 %mend DSNameOnly;
 
-/** End Macro Definition **/
 
-/*******  UNCOMMENT TO TEST MACRO *******
+/************************ UNCOMMENT TO TEST ***************************
 
 options mprint symbolgen mlogic;
 
@@ -33,5 +61,5 @@ options mprint symbolgen mlogic;
 %let test2_ds = %DSNameOnly( &test2 );
 %put test2=&test2 test2_ds=&test2_ds;
 
-/****************************************/
+/**********************************************************************/
 

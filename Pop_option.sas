@@ -1,24 +1,45 @@
-/* Pop_option.sas - UI SAS Autocall Macro Library
- *
- * Pop specified SAS system option from top of stack and restore as
- * current option value.
- *
- * NB:  Program written for SAS Version 8.2
- *
- * 09/06/05  Peter A. Tatian
-   02/23/11  PAT  Added declaration for local macro vars.
- ****************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Pop_option
 
-/** Macro Pop_option - Start Definition **/
+ Description: Pop specified SAS system option from top of stack and 
+ restore as current option value.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
-%macro Pop_option( option, quiet=N );
+%macro Pop_option( 
+  option,    /** Name of option value to restore **/
+  quiet=N    /** QUIET=Y to suppress LOG messages **/
+  );
 
-  %**put _user_;
-  
-  %let quiet = %upcase(&quiet);
-  
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Pop_option( obs )
+       restores the most recently saved obs= option value
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
   %global _&option._stack;
-  %local new_stack i opt;
+  %local new_stack i opt option_val;
+
+   
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
 
   %let option_val = %scan( &&&_&option._stack, 1 );
   
@@ -31,7 +52,7 @@
   
   options &option_val;
   
-  %if &quiet = N %then %do;
+  %if not %mparam_is_yes( &quiet ) %then %do;
     %note_mput( macro=Pop_option, msg=System option %upcase(&option_val) restored. )
   %end;
   
@@ -56,18 +77,18 @@
   
   %exit_macro:
   
-  %**put _user_;
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
 
 %mend Pop_option;
 
-/** End Macro Definition **/
+
+/************************ UNCOMMENT TO TEST ***************************
 
 
-/********** UNCOMMENT TO TEST **************************
-
-filename uidev "D:\Projects\UISUG\MacroDev";
 filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
-options sasautos=(uidev uiautos sasautos);
+
+options sasautos=(uiautos sasautos);
 
 *options mprint symbolgen mlogic;
 options nomprint;
@@ -84,11 +105,24 @@ options obs=10;
 options obs=0;
 %Push_option( obs )
 
+%put _user_;
+
 %Pop_option( obs )
+%put _user_;
+
 %Pop_option( obs )
+%put _user_;
+
 %Pop_option( obs )
+%put _user_;
+
+%Pop_option( obs )
+%put _user_;
 
 %Pop_option( mprint )
+%put _user_;
 
-/********************************************************/
+%Pop_option( orientation )
+%put _user_;
 
+/**********************************************************************/

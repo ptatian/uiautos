@@ -1,26 +1,16 @@
-/* Compile_num_desc.sas - UI SAS Macro Library
- *
- * Compiles numeric statistics (n, sum, mean, std, min, max) for all
- * variables in a data set.  Default is to put statistics in a data set
- * called WORK._DESC_&ds_name.
- *
- * NB:  Program written for SAS Version 8.2
- *
- * 08/31/04  Peter A. Tatian
- * 09/02/04  Added cleanup of temporary data sets
- *           Added var_list option
- * 10/28/04  Forced temporary data sets to be uncompressed.
- *           Added var_pre option
- * 10/29/04  Now sorts temp. output data sets and merges them by _NAME_.
- * 09/29/10  PAT  Makes sure that output data set name is 32 chars or less.
-                  Creates global macro variable _compile_num_desc_out which
-                  has full name of output data set.
-   02/23/11  PAT  Added declaration for local macro vars.
-                  Added default value WORK for ds_lib=.
-                  Added macro testing code.
- ****************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Compile_num_desc
 
-/** Macro Compile_num_desc - Start Definition **/
+ Description: Compiles numeric statistics (n, sum, mean, std, min, max) for all
+ variables in a data set.  Default is to put statistics in a data set
+ called WORK._DESC_&ds_name.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro Compile_num_desc( 
   stats=n mean std min max,     /* List of statistics */
@@ -31,9 +21,47 @@
   var_pre=_desc                 /* Output variable prefix */
   );
   
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Compile_num_desc( 
+       stats=n mean std min max,
+       ds_lib=,
+       ds_name=Test,
+       var_list=a b
+     )
+     calculates n, mean, std, min, and max of variables
+     a and b and saves them in new data set work._desc_test.
+     one observation in output data set for each input variable.
+     Variables in output data set are _name_ (name of input var), 
+     and _desc_n, _desc_mean, etc.
+     Default is to put statistics in data set WORK._DESC_&ds_name.
+     Output data set name is saved in global macro var _compile_num_desc_out.
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   08/31/04  Peter A. Tatian
+   09/02/04  Added cleanup of temporary data sets
+             Added var_list option
+   10/28/04  Forced temporary data sets to be uncompressed.
+             Added var_pre option
+   10/29/04  Now sorts temp. output data sets and merges them by _NAME_.
+   09/29/10  PAT  Makes sure that output data set name is 32 chars or less.
+                   Creates global macro variable _compile_num_desc_out which
+                   has full name of output data set.
+   02/23/11  PAT  Added declaration for local macro vars.
+                  Added default value WORK for ds_lib=.
+                  Added macro testing code.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
   %global _compile_num_desc_out;  /** Global macro var for output data set name **/
   %local out_lib out_name i s files; 
-  
+   
   %** Assume WORK library if blank **;
   %if &ds_lib = %then %let ds_lib = work;
 
@@ -56,6 +84,13 @@
   
   %note_mput( macro=Compile_num_desc, 
               msg=Output data set name %upcase(&_compile_num_desc_out) saved to global macro variable _COMPILE_NUM_DESC_OUT. )
+
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
 
   %let i = 1;
   %let s = %scan( &stats, &i );
@@ -87,24 +122,24 @@
     by _name_;
   run;
   
+  
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
   proc datasets library=work memtype=(data) nolist nowarn;
     delete _cnd_: ;
   quit;
   
 %mend Compile_num_desc;
 
-/** End Macro Definition **/
 
-
-/***** UNCOMMENT TO TEST MACRO *****
+/************************ UNCOMMENT TO TEST ***************************
 
 title "Compile_num_desc:  SAS Macro";
 
 ** Autocall macros **;
 
-filename macrodev "D:\Projects\UISUG\MacroDev";
 filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
-options sasautos=(macrodev uiautos sasautos);
+options sasautos=(uiautos sasautos);
 
 options mprint nosymbolgen nomlogic;
 
@@ -145,4 +180,7 @@ proc print data=&_compile_num_desc_out;
   title2 "File = &_compile_num_desc_out";
 run;
 
-/***** END MACRO TEST *****/
+proc datasets library=work memtype=(data);
+quit;
+
+/**********************************************************************/

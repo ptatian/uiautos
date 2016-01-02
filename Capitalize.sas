@@ -1,24 +1,55 @@
-/* Capitalize.sas - SAS Macro
- *
- * Autocall macro to capitalize the first letter of a text string.
- *
- * NB:  Program written for SAS Version 8.2
- *
- * 01/02/03  Peter A. Tatian
- ****************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Capitalize
 
-/** Macro Capitalize - Start Definition **/
+ Description: Autocall macro to capitalize the first letter of a text string.
+ 
+ Use: Function
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
-%macro Capitalize( s );
+%macro Capitalize( 
+  s    /** String var or value **/
+  );
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %capitalize( "URBAN INSTITUTE" )
+       returns string value "Urban institute"
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+    %local ;
+    
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
 
   ( upcase( substr( (&s), 1, 1 ) ) || lowcase( substr( (&s), 2 ) ) )
 
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+  
 %mend Capitalize;
 
 /** End Macro Definition **/
 
 
-/***** UNCOMMENT TO TEST MACRO *****
+/************************ UNCOMMENT TO TEST ***************************
 
 title "Capitalize:  SAS Macro";
 
@@ -28,6 +59,16 @@ filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
 options sasautos=(uiautos sasautos);
 
 options mprint symbolgen mlogic;
+
+data _null_;
+
+  length cstr $ 30;
+
+  cstr = %capitalize( "URBAN INSTITUTE" );
+
+  put cstr=;
+  
+run;
 
 data _null_;
 
@@ -51,4 +92,4 @@ pEtEr TaTiAn
 
 run;
 
-/***** END MACRO TEST *****/
+/**********************************************************************/

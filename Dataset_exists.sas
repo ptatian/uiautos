@@ -1,18 +1,14 @@
-/************************************************************************
-* Program:  Dataset_exists.sas
-* Project:  UI SAS Macro Library
-* Author:   P. Tatian
-* Updated:  10/28/04
-* Version:  SAS 8.2
-* 
-* Description:  Returns TRUE (1) if a data set exists, FALSE (0) if not.
-*
-* Modifications:
-*   11/15/04  Added MEMTYPE= option to specify type of file (ACCESS, 
-*             CATALOG, DATA (def.), or VIEW).
-************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Dataset_exists
 
-/** Macro Dataset_exists - Start Definition **/
+ Description: Returns TRUE (1) if a data set exists, FALSE (0) if not.
+ 
+ Use: Function
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro Dataset_exists( 
   dsn,     /* Macro name */
@@ -20,24 +16,48 @@
   memtype=data  /* SAS file type (def. data set) */
   );
 
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Dataset_exists( Dat.MyFile, Quiet=N )
+       returns true (1) if data set Dat.Myfile exists, false (0) otherwise
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   11/15/04  Added MEMTYPE= option to specify type of file (ACCESS, 
+             CATALOG, DATA (def.), or VIEW).
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+
   %if %sysfunc(exist(&dsn,&memtype)) %then %do;
     1
-    %if %upcase( &quiet ) = N %then %do;
+    %if %mparam_is_no( &quiet ) %then %do;
       %Note_mput( macro=Dataset_exists, msg=The data set &dsn (%upcase(&memtype)) exists. )
     %end;
   %end;
   %else %do;
     0
-    %if %upcase( &quiet ) = N %then %do;
+    %if %mparam_is_no( &quiet ) %then %do;
       %Note_mput( macro=Dataset_exists, msg=The data set &dsn (%upcase(&memtype)) does not exist. )
     %end;
   %end;
 
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
 %mend Dataset_exists;
 
-/** End Macro Definition **/
 
-/******** UNCOMMENT TO TEST **********
+/************************ UNCOMMENT TO TEST ***************************
 
 options mprint nosymbolgen nomlogic;
 
@@ -52,11 +72,11 @@ run;
 
 data _null_;
 
-  x = %Dataset_exists( Exists, Quiet=N );
-  y = %Dataset_exists( NoExist, Quiet=N );
+  x = %Dataset_exists( Exists, Quiet=n );
+  y = %Dataset_exists( NoExist, Quiet=n );
   
   put x= y=;
   
 run;
 
-/******** END TEST **********/
+/**********************************************************************/

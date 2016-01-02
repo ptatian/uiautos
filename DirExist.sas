@@ -1,22 +1,63 @@
-/**************************************************************************
- Program:  DirExist.sas
- Project:  UI Macro Library
- Author:   P. Tatian
- Created:  11/02/13
- Version:  SAS 9.2
- Environment:  Windows
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
  
+ Macro: DirExist
+
  Description: Returns 1 if specified folder exists, 0 if it does not exist.
  
- Source: http://www.sascommunity.org/wiki/Tips:Check_if_a_directory_exists
+ Code source is http://www.sascommunity.org/wiki/Tips:Check_if_a_directory_exists
+ 
+ Use: Function
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
- Modifications:
-**************************************************************************/
+%macro DirExist(
+  dir    /** Folder pathname **/
+  ); 
 
-%macro DirExist(dir) ; 
-   %LOCAL rc fileref return; 
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %DirExist( K:\Metro\PTatian\UISUG\Uiautos )
+       returns true (1) if folder K:\Metro\PTatian\UISUG\Uiautos exists,
+       false (0) otherwise
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local rc fileref return; 
+    
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+
    %let rc = %sysfunc(filename(fileref,&dir)) ; 
    %if %sysfunc(fexist(&fileref)) %then %let return=1;    
    %else %let return=0;
    &return
+
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+
 %mend DirExist;
+
+
+/************************ UNCOMMENT TO TEST ***************************
+
+%let r = %DirExist( K:\Metro\PTatian\UISUG\Uiautos );
+
+%put r=&r;
+
+/**********************************************************************/
+

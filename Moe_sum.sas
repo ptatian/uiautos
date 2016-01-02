@@ -1,23 +1,45 @@
-/* Moe_sum.sas - UISUG SAS Macro Library
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
  
-  Autocall macro to calculate margins of error for summed estimates.
-  
-  Method based on 
-  http://www.census.gov/acs/www/Downloads/handbooks/ACSResearch.pdf
-  p. A-14.
- 
-  NB:  Program written for SAS Version 9.1
- 
-  06/28/11  Peter A. Tatian
-****************************************************************************/
+ Macro: Moe_sum
 
-/** Macro moe_sum - Start Definition **/
+ Description: Autocall macro that returns a calculation for a margin of error 
+ for a derived sum of values from the individual margins of error comprising
+ the sum.
+ 
+ Use: Function
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro moe_sum( 
   var=           /** List of variables containing MOE values to sum **/
   );
 
-  %local i calc;
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %moe_sum( var=a_moe b_moe c_moe )
+       returns calculation for margin of error based on sum of the 
+       margins of error for three values a_moe, b_moe, and c_moe
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local i v calc;
+    
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
   
   %let calc = sqrt( ;
   %let i = 1;
@@ -38,7 +60,24 @@
   
   (&calc)
 
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
 %mend moe_sum;
 
-/** End Macro Definition **/
+
+/************************ UNCOMMENT TO TEST ***************************
+
+options mprint;
+
+data _null_;
+
+  sum = 45 + 50 + 55;
+  moe = %moe_sum( var=5 4 2 );
+  put sum= moe=;
+
+run;
+
+/**********************************************************************/
+
 

@@ -1,41 +1,65 @@
-/* Sort_array_ref.sas - SAS Macro Library
- *
- * SAS autocall macro to 'sort' the elements in an array by reference.  
- * Given an array, say A{*}, the macro creates a temporary array 
- * called A_SRTD{*} that contains a list of indices for the 
- * original array that will put its elements in sorted order.
- *
- * Uses bubble sort algorithm.
- *
- * NB:  Program written for SAS Version 8.2
- *
- * 06/02/03  Peter A. Tatian
- ****************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Sort_array_ref
 
-
-/** Macro Sort_array_ref - Start Definition **/
+ Description: autocall macro to 'sort' the elements in an array by reference.  
+ Given an array, A{*}, the macro creates a temporary array 
+ called A_SRTD{*} that contains a list of indices for the 
+ original array that will put its elements in sorted order.
+ 
+ Use: Within data step
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro Sort_array_ref( arry, max_arry_size=32767, order=ASCENDING, quiet=N );
 
-  %if %upcase( &order ) = DESCENDING %then %do; 
-    %let comp_op = LT;
-    %if %upcase( &quiet ) ~= Y %then %do;
-      put "NOTE (Sort_array_ref):  Array %upcase( &arry ) sorted in DESCENDING order.";
-    %end;
-  %end;
-  %else %do; 
-    %let comp_op = GT;
-    %if %upcase( &quiet ) ~= Y %then %do;
-      put "NOTE (Sort_array_ref):  Array %upcase( &arry ) sorted in ASCENDING order.";
-    %end;
-  %end;
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Sort_array_ref( a )
+       creates a temporary array, a_srtd{}, that has the index values
+       for array a{} that put array values in ascending order, ie,
+       a{a_srtd{1}} would return the smallest value in a{}
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   06/02/03  Peter A. Tatian
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local comp_op;
+    
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
 
   ** Check that size of array does not exceed temporary array size **;
   
   if dim( &arry ) > &max_arry_size then do;
-    put "ER" "ROR (Sort_array_ref):  Size of array %upcase( &arry ) exceeds limit set in MAX_ARRY_SIZE parameter (&max_arry_size).";
-    put "ER" "ROR (Sort_array_ref):  Specify a larger value for MAX_ARRY_SIZE= in macro invocation.";
+    %err_put( macro=Sort_array_ref, msg="Size of array %upcase( &arry ) exceeds limit set in MAX_ARRY_SIZE parameter (&max_arry_size)." )
+    %err_put( macro=Sort_array_ref, msg="Specify a larger value for MAX_ARRY_SIZE= parameter in macro invocation." )
   end;
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+
+  %if %upcase( &order ) = DESCENDING %then %do; 
+    %let comp_op = LT;
+    %if not %mparam_is_yes( &quiet ) %then %do;
+      %note_put( macro=Sort_array_ref, msg="Array %upcase( &arry ) will be sorted in DESCENDING order." )
+    %end;
+  %end;
+  %else %do; 
+    %let comp_op = GT;
+    %if not %mparam_is_yes( &quiet ) %then %do;
+      %note_put( macro=Sort_array_ref, msg="Array %upcase( &arry ) will be sorted in ASCENDING order." )
+    %end;
+  %end;
 
   ** Define temporary array of array indices to sort **;
 
@@ -63,12 +87,13 @@
 
   drop _srta_i _srta_j _srta_z;
 
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
 %mend Sort_array_ref;
 
-/** End Macro Definition **/
 
-
-/***** UNCOMMENT TO TEST MACRO *****
+/************************ UNCOMMENT TO TEST ***************************
 
 title "Sort_array_ref:  SAS Macro Library";
 
@@ -132,5 +157,4 @@ data _null_;
 
 run;
 
-/***** END MACRO TEST *****/
-
+/**********************************************************************/

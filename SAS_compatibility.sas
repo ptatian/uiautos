@@ -1,64 +1,65 @@
 /******************* URBAN INSTITUTE MACRO LIBRARY *********************
  
- Macro: GetProgDrive
+ Macro: SAS_compatibility
 
- Description: Autocall macro to return the drive letter of the currently 
- submitted SAS program to the global macro variable given by VAR.  
- If running in interactive mode, macro returns blank. 
+ Description: Submits system options for backward compatibility
+ of earlier SAS versions. 
+
+ Currently supports backward compatibility of versions 9.3 and 9.4 to
+ 9.2. 
  
- Use: Function
+ Use: Open code
  
  Author: Peter Tatian
  
 ***********************************************************************/
 
-%macro GetProgDrive( var );
+%macro SAS_compatibility( 
+  ver=9.2    /** Version number (currently only 9.2 supported) **/
+  );
 
   /*************************** USAGE NOTES *****************************
    
    SAMPLE CALL: 
-     %GetProgDrive( _pdrive )
-       saves drive letter of current program to macro var _pdrive
+     %SAS_compatibility(  )
 
   *********************************************************************/
 
   /*************************** UPDATE NOTES ****************************
 
-  7/28/15  Program created
 
   *********************************************************************/
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %global &var;
-  %local FullName;
     
     
   %***** ***** ***** ERROR CHECKS ***** ***** *****;
 
-
+  %if &ver ~= 9.2 %then %do;
+    %err_mput( macro=SAS_compatibility, msg=Value ver=&ver not supported. )
+    %goto exit;
+  %end;
 
   %***** ***** ***** MACRO BODY ***** ***** *****;
 
-  %let FullName = %sysfunc( getoption( sysin ) );
-  
-  %if %length( &FullName ) > 0 %then %do;
-    %let &var = %upcase(%substr( &FullName, 1, 1 ));
-  %end;
-  %else %do;
-    %let &var = ;
+  %if %sysevalf(&sysver >= 9.3) %then %do;
+    options extendobscounter=no validmemname=compatible;
   %end;
 
+  %exit:
 
   %***** ***** ***** CLEAN UP ***** ***** *****;
 
-%mend GetProgDrive;
+%mend SAS_compatibility;
 
 
 /************************ UNCOMMENT TO TEST ***************************
 
-%GetProgDrive( _pdrive )
+options mprint mlogic symbolgen;
 
-%put _user_;
+%SAS_compatibility()
+
+%SAS_compatibility( ver=6 )
 
 /**********************************************************************/

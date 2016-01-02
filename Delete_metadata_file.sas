@@ -1,23 +1,44 @@
-/* Delete_metadata_file.sas - SAS Autocall Macro Library
- *
- * Deletes metadata for a SAS data set.
- *
- * NB:  Program written for SAS Version 8.2
- *
- * 12/20/04  Peter A. Tatian
- * 09/06/05  Added OPTIONS OBS=MAX to avoid data loss when updating metadata.
- ****************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Delete_metadata_file
 
-/** Macro Delete_metadata_file - Start Definition **/
+ Description: Deletes metadata for a SAS data set.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro Delete_metadata_file(  
-         ds_lib= ,
-         ds_name= ,
-         meta_lib= ,
-         meta_pre= meta,
-         update_notify=
+         ds_lib= ,         /** Data set library reference **/
+         ds_name= ,        /** Data set name **/
+         meta_lib= ,       /** Metadata library reference **/
+         meta_pre= meta,   /** Metadata data set name prefix **/
+         update_notify=    /** DEPRECATED PARAMETER **/
   );
   
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Delete_metadata_file( 
+              ds_lib= Health,
+              ds_name= Birth_1998_geo00,
+              meta_lib= meta
+       )
+       deletes all metadata for data set Health.Birth_1998_geo00
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   12/20/04  Peter A. Tatian
+   09/06/05  Added OPTIONS OBS=MAX to avoid data loss when updating metadata.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
   %let ds_lib = %upcase( &ds_lib );
   %let ds_name = %upcase( &ds_name );
 
@@ -27,6 +48,9 @@
   
   options obs=max;
   %Note_mput( macro=Delete_metadata_file, msg=OPTIONS OBS set to MAX for metadata processing. )
+
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
 
   ** Check for existence of library metadata file **;
   
@@ -54,6 +78,9 @@
     %goto exit_err;
   %end;
   
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+
   ** Delete data set from metadata **;
   
   /** Macro _delete_file - Start Definition **/
@@ -93,6 +120,8 @@
   
   %exit:
   
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
   %** Restore system options **;
   
   %Pop_option( obs )
@@ -101,35 +130,87 @@
 
 %mend Delete_metadata_file;
 
-/** End Macro Definition **/
 
-
-/******************** UNCOMMENT TO TEST MACRO ********************
-
-libname general v8 "D:\Projects\DCNIS\Data\General";
-libname health v8 "D:\Projects\DCNIS\Data\Health";
-libname ipums v8 "D:\DCData\Libraries\IPUMS\Data";
-libname meta v8 "D:\Projects\UISUG\Data";
-
-options mprint nosymbolgen nomlogic;
-options fmtsearch=(ipums health general);
+/************************ UNCOMMENT TO TEST ***************************
 
 ** Autocall macros **;
 
-filename uidev "D:\Projects\UISUG\MacroDev";
 filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
-options sasautos=(uidev uiautos sasautos);
+options sasautos=(uiautos sasautos);
+
+proc format library=work;
+  value $region
+    "Africa" = "~Africa"
+    "Asia" = "~Asia"
+    "Canada" = "~Canada"
+    "Central America/Caribbean" = "~Central America/Caribbean"
+    "Eastern Europe" = "~Eastern Europe"
+    "Middle East" = "~Middle East"
+    "Pacific" = "~Pacific"
+    "South America" = "~South America"
+    "United States" = "~United States"
+    "Western Europe" = "~Western Europe";
+    
+data Shoes;
+
+  set Sashelp.shoes;
+  
+  format region $region.;
+  
+run;
+
+data Class;
+
+  set Sashelp.class;
+  
+  label
+    Age = "Age (years)";
+
+run;
+
+%Update_metadata_library( 
+         lib_name=Work,
+         lib_desc=Test library,
+         meta_lib=work
+      )
+
+%Update_metadata_file( 
+         ds_lib=Work,
+         ds_name=Shoes,
+         creator=SAS Institute,
+         creator_process=SAS Institute,
+         revisions=Test file.,
+         meta_lib=work
+      )
+
+%Update_metadata_file( 
+         ds_lib=Work,
+         ds_name=Class,
+         creator=SAS Institute,
+         creator_process=SAS Institute,
+         revisions=Test file #2.,
+         meta_lib=work
+      )
+
+proc datasets library=work memtype=(data);
+quit;
+
+title1 "BEFORE FILE DELETE";
+%File_info( data=Meta_files, printobs=50, contents=n, stats= )
+%File_info( data=Meta_vars, printobs=50, contents=n, stats= )
+%File_info( data=Meta_fval, printobs=50, contents=n, stats= )
+%File_info( data=Meta_history, printobs=50, contents=n, stats= )
 
 %Delete_metadata_file( 
-         ds_lib= Health,
-         ds_name= Birth_1998_geo00,
-         meta_lib= meta
+         ds_lib= Work,
+         ds_name= Shoes,
+         meta_lib= work
   )
 
-%File_info( data=Meta.Meta_libs, stats= )
-%File_info( data=Meta.Meta_files, stats=, printobs=0 )
-%File_info( data=Meta.Meta_vars, stats=, printobs=0 )
-%File_info( data=Meta.Meta_fval, stats=, printobs=1000000 )
-%File_info( data=Meta.Meta_history, stats=, printobs=0 )
+title1 "AFTER FILE DELETE";
+%File_info( data=Meta_files, printobs=50, contents=n, stats= )
+%File_info( data=Meta_vars, printobs=50, contents=n, stats= )
+%File_info( data=Meta_fval, printobs=50, contents=n, stats= )
+%File_info( data=Meta_history, printobs=50, contents=n, stats= )
 
-/*************************************************************/
+/**********************************************************************/

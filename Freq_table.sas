@@ -1,77 +1,96 @@
-/* Freq_table.sas - Create data set with frequency tables for selected vars
-*
-* SAS autocall macro to create a data set containing frequency 
-* distributions for a set of variables from an input data set.  
-* Each value of a variable in the input data set is a single obs
-* in the output data set.  The output data set contains the
-* following variables:
-*
-*   Variable - The name of the variable
-*   Value    - The raw value of the variable (nb: this is a char var)
-*   FmtValue - The formatted value of the variable.  If variable is
-*               unformatted, then this is the same as Value.
-*   Frequency - Frequency of the value for the variable
-*   Percent   - Percentage of value for the variable
-*   CumFrequency - Cumm. frequency of the value for the variable
-*   CumPercent   - Cumm. percentage of value for the variable
-*   
-* The following named parameters must be supplied:
-* 
-*     in_data   = Input data set
-*     var_list  = List of variables to include in freqs.
-*     out_data  = Output data set
-*
-* The following parameters are optional:
-*
-*     formats   = Format specifications for variables
-*                 (NB:  Formats saved in data set will be used
-*                       if no formats specified in macro.)
-*     missing   = Include missing values in freqs (Y/N, def. Y)
-*     print     = Print freq tables in listing output (Y/N, def. N)
-*
-* For an example of macro usage, see the MACRO TEST below.
-*
- Modifications:
- 11/26/02  Peter A. Tatian
- 09/02/04  Added check for empty variable list.  Macro exits if VAR_LIST
-           is blank.
- 06/24/06  Fixed problems introduced with switch to SAS 9.
-           Added MPRINT= option.
- 12/11/06  Now supports both SAS versions 8 & 9.
-           Changed length of output data set var. VARIABLE to 32 
-           to be compatible with Proc Contents data set.
- 02/23/11  PAT  Added declaration for local macro vars.
-****************************************************************************/
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Freq_table
 
-/** Macro FREQ_TABLE - Start Definition **/
+ Description: SAS autocall macro to create a data set containing frequency 
+ distributions for a set of variables from an input data set.  
+ Each value of a variable in the input data set is a single obs
+ in the output data set.  The output data set contains the
+ following variables:
+
+   Variable - The name of the variable
+   Value    - The raw value of the variable (nb: this is a char var)
+   FmtValue - The formatted value of the variable.  If variable is
+               unformatted, then this is the same as Value.
+   Frequency - Frequency of the value for the variable
+   Percent   - Percentage of value for the variable
+   CumFrequency - Cumm. frequency of the value for the variable
+   CumPercent   - Cumm. percentage of value for the variable
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
 
 %macro Freq_table( 
-    in_data = ,
-    var_list = ,
-    formats = ,
-    out_data = ,
-    missing = Y,
-    print = N,
-    mprint = N
+    in_data = ,    /** Input data set **/
+    var_list = ,   /** List of variables for frequencies **/
+    formats = ,    /** Format assignments for variables (optional, Formats saved in data set will be used if no formats specified in macro.) **/
+    out_data = ,   /** Output data set **/
+    missing = Y,   /** Include missing values in freqencies (Y/N) **/ 
+    print = N,     /** Print freq tables in listing output (Y/N) **/
+    mprint = N     /** Print resolved macro code in LOG **/
   );
 
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Freq_table( 
+       in_data = Test, 
+       var_list = q1 q2 q3, 
+       formats = q1 q1f. q3 $q3f.,
+       out_data = Test_freq_table,
+       missing = Y
+       )
+
+    The following named parameters must be supplied:
+        in_data   = Input data set
+        var_list  = List of variables to include in freqs.
+        out_data  = Output data set
+   
+    The following parameters are optional:
+        formats   = Format specifications for variables
+                    (Formats saved in data set will be used
+                     if no formats specified in macro.)
+        missing   = Include missing values in freqs (Y/N, def. Y)
+        print     = Print freq tables in listing output (Y/N, def. N)
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   11/26/02  Peter A. Tatian
+   09/02/04  Added check for empty variable list.  Macro exits if VAR_LIST
+             is blank.
+   06/24/06  Fixed problems introduced with switch to SAS 9.
+             Added MPRINT= option.
+   12/11/06  Now supports both SAS versions 8 & 9.
+             Changed length of output data set var. VARIABLE to 32 
+             to be compatible with Proc Contents data set.
+   02/23/11  PAT  Added declaration for local macro vars.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
   %local SAS_VER namelist i var;
 
   %Note_mput( macro=Freq_table, msg=Macro starting. )
   
-  %let mprint = %upcase( &mprint );
-
   %** Save current MPRINT setting and reset based on MPRINT= parameter **;
 
   %Push_option( mprint, quiet=y )
 
-  %if &mprint = Y %then %do;
+  %if %mparam_is_yes( &mprint ) %then %do;
     options mprint;
   %end;
   %else %do;
     options nomprint;
   %end;
   
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
   %** Check compatible SAS version **;
 
   %let SAS_VER = %sysfunc( int( &SYSVER ) );
@@ -88,7 +107,10 @@
     %goto exit;
   %end;
 
-  %if %upcase( &print ) = N %then %do;
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+
+  %if %mparam_is_no( &print ) %then %do;
     ods listing close;
   %end;
   
@@ -102,7 +124,7 @@
 
   proc freq data=&in_data;
     tables &var_list 
-      %if %upcase( &missing ) = Y %then %do; 
+      %if %mparam_is_yes( &missing ) %then %do; 
         /missing
       %end;
     ;
@@ -114,7 +136,7 @@
 
   ods output close;
 
-  %if %upcase( &print ) = N %then %do;
+  %if %mparam_is_no( &print ) %then %do;
     ods listing;
   %end;
 
@@ -174,18 +196,21 @@
 
   %exit:
 
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
   %** Restore system options **;
 
   %Pop_option( mprint, quiet=y )
+  
 
   %Note_mput( macro=Freq_table, msg=Macro exiting. )
 
 %mend Freq_table;
 
-/** End Macro Definition **/
 
 
-/***************** UNCOMMENT TO TEST MACRO *****************
+/************************ UNCOMMENT TO TEST ***************************
 
 title 'Freq_table:  UISUG Macro Library';
 
@@ -250,5 +275,5 @@ proc print data=Test_freq_table noobs;
 
 run;
 
-/***************** END MACRO TEST *****************/
+/**********************************************************************/
 

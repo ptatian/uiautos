@@ -1,10 +1,9 @@
 /******************* URBAN INSTITUTE MACRO LIBRARY *********************
  
- Macro: GetProgDrive
+ Macro: mparam_is_no
 
- Description: Autocall macro to return the drive letter of the currently 
- submitted SAS program to the global macro variable given by VAR.  
- If running in interactive mode, macro returns blank. 
+ Description: Returns 1 if the macro parameter value is "No" 
+ (could be "n", "N", "nO", etc.)
  
  Use: Function
  
@@ -12,53 +11,71 @@
  
 ***********************************************************************/
 
-%macro GetProgDrive( var );
+%macro mparam_is_no( 
+  param   /** Macro parameter value to test (must resolve to a single value) **/
+  );
 
   /*************************** USAGE NOTES *****************************
    
    SAMPLE CALL: 
-     %GetProgDrive( _pdrive )
-       saves drive letter of current program to macro var _pdrive
+     %mparam_is_no( &quiet )
 
   *********************************************************************/
 
   /*************************** UPDATE NOTES ****************************
 
-  7/28/15  Program created
 
   *********************************************************************/
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %global &var;
-  %local FullName;
+    %local ;
     
     
   %***** ***** ***** ERROR CHECKS ***** ***** *****;
 
-
+  
 
   %***** ***** ***** MACRO BODY ***** ***** *****;
-
-  %let FullName = %sysfunc( getoption( sysin ) );
   
-  %if %length( &FullName ) > 0 %then %do;
-    %let &var = %upcase(%substr( &FullName, 1, 1 ));
+  %if %quote(%upcase((&param))) = %quote((N)) or
+      %quote(%upcase((&param))) = %quote((NO)) %then %do;
+    1
   %end;
   %else %do;
-    %let &var = ;
+    0
   %end;
-
-
+  
   %***** ***** ***** CLEAN UP ***** ***** *****;
 
-%mend GetProgDrive;
+  
+  
+%mend mparam_is_no;
 
 
 /************************ UNCOMMENT TO TEST ***************************
 
-%GetProgDrive( _pdrive )
+  *options mprint symbolgen mlogic;
 
-%put _user_;
+  %let p = n;
+  %let result = %mparam_is_no( &p );
+  %put p=&p result=&result;
+
+  %let p = No;
+  %let result = %mparam_is_no( &p );
+  %put p=&p result=&result;
+  
+  %let p = Not;
+  %let result = %mparam_is_no( &p );
+  %put p=&p result=&result;
+  
+  %let p = Y;
+  %let result = %mparam_is_no( &p );
+  %put p=&p result=&result;
+  
+  %let p = ;
+  %let result = %mparam_is_no( &p );
+  %put p=&p result=&result;
 
 /**********************************************************************/
+

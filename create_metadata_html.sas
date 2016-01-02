@@ -1,10 +1,65 @@
-/* Create_metadata_html.sas - SAS Autocall Macro Library
-  
-   Creates HTML pages from metadata repository created by the
-   Update_metadata() macro.
-  
-   NB:  Program written for SAS Version 9.1.3
-  
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Create_metadata_html
+
+ Description: Creates HTML pages from metadata repository created by the
+ Update_metadata() macro.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
+
+%macro Create_metadata_html( 
+         meta_lib= ,         /** Library reference for metadata data sets **/
+         meta_pre= meta,     /** Data set name prefix for metadata data sets **/
+         meta_title= ,       /** Title for metadata HTML pages **/
+         update_months=12,   /** Number of past months to show on update page **/
+         rss=N,              /** Create RSS update feed? **/
+         rss_url=,           /** Prefix URL for RSS update feed **/
+         rss_timezone=EST,   /** Timezone for RSS date/time stamps **/
+         creator_fmt=,       /** Format for FileCreator (lowercase values) **/
+         error_notify=,      /** Email addresses to notify when error occurs (DEPRECATED) **/
+         html_folder= ,      /** Folder for HTML files **/
+         html_pre= meta,     /** Filename prefix for HTML files **/
+         html_suf= html,     /** Filename suffix for HTML files **/
+         html_title= Metadata -,  /** HTML title prefix **/
+         html_stylesht= ,    /** HTML CSS stylesheet **/
+         html_head= ,        /** HTML header tags **/
+         html_pg_header= ,   /** HTML page header **/
+         html_pg_footer= ,   /** HTML page footer **/
+         html_altbgcol=#CCFFCC,  /** Color for alternating backround rows **/
+         html_meta_tags=
+           "  <meta http-equiv=""Content-type"" content=""text/html;charset=UTF-8"">" /
+           "  <meta name=""generator"" content=""SAS macro Create_metadata_html()"">" /
+           "  <meta name=""robots"" content=""noindex,nofollow"">"
+           /** HTML page meta tags **/
+       );
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Create_metadata_html( 
+              meta_lib= metadata,
+              meta_pre= meta,
+              meta_title= NeighborhoodInfo DC Metadata System,
+              update_months= 12,
+              creator_fmt= $creator.,
+              html_folder= L:\Metadata\,
+              html_pre= meta,
+              html_suf= html,
+              html_title= NeighborhoodInfo DC Metadata -,
+              html_stylesht= metadata_style.css
+            )
+         create metadata HTML pages in folder L:\Metadata\
+         Format $creator is used to convert FileCreator initials to 
+         full names.
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
    12/31/03  Peter A. Tatian
    09/01/04  Add formatted values to HTML pages
              Revised library list
@@ -44,35 +99,11 @@
                  latest dates before). 
    10/21/11  PAT Added macro starting and ending messages to LOG. 
    03/30/14  PAT Added Creator process (FileProcess) to file history pages.
- ***************************************************************************/
 
-/** Macro Create_metadata_html - Start Definition **/
+  *********************************************************************/
 
-%macro Create_metadata_html( 
-         meta_lib= ,
-         meta_pre= meta,
-         meta_title= ,
-         update_months=12,
-         rss=N,              /** Create RSS update feed? **/
-         rss_url=,           /** Prefix URL for RSS update feed **/
-         rss_timezone=EST,   /** Timezone for RSS date/time stamps **/
-         creator_fmt=,       /** Format for FileCreator (lowercase values) **/
-         error_notify=,      /** Email addresses to notify when error occurs (ALPHA only) **/
-         html_folder= ,
-         html_pre= meta,
-         html_suf= html,
-         html_title= Metadata -,
-         html_stylesht= ,
-         html_head= ,
-         html_pg_header= ,
-         html_pg_footer= ,
-         html_altbgcol=#CCFFCC,
-         html_meta_tags=
-           "  <meta http-equiv=""Content-type"" content=""text/html;charset=UTF-8"">" /
-           "  <meta name=""generator"" content=""SAS macro Create_metadata_html()"">" /
-           "  <meta name=""robots"" content=""noindex,nofollow"">"
-       );
-
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
   %local html_doctype date_fmts cur_dt_raw cur_tm_raw cur_dt cur_tm i em;
   
   %Note_mput( macro=Create_metadata_html, msg=Macro (version 10/21/11) starting. )
@@ -103,9 +134,6 @@
     "/YYQR/" ||
     "/YYQRC/YYQRD/YYQRN/YYQRP/YYQRS/";
 
-  %let rss = %upcase( &rss );
-  %let rss_timezone = %upcase( &rss_timezone );
-
   %** Get current date & time for stamping HTML pages **;
   
   %let cur_dt_raw = %sysfunc( date( ) );
@@ -125,12 +153,12 @@
   
   %if &update_months = %then %let update_months = 0;
   
-  %** Error notify only available for Alpha **;
-  %if %length( &error_notify ) > 0 %then %do;
-    %if &SYSSCP = WIN %then %do;
-      %Warn_mput( macro=CREATE_METADATA_HTML, msg=Email notification (ERROR_NOTIFY=) is only available in Alpha environment. )
-    %end;
-  %end;
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
 
   *****************************************;
   ****  Create library list page       ****;
@@ -240,8 +268,6 @@
   *****************************************;
   ****  Create library/file list pages ****;
   *****************************************;
-  
-  *filename fl_out "&html_folder.&html_pre._files.&html_suf";
   
   ** Add file names to variable data **;
   
@@ -1312,7 +1338,7 @@
     run;  
     
     
-    %if &rss = Y %then %do;
+    %if %mparam_is_yes( &rss ) %then %do;
     
       /** Macro rss_std_dt - Start Definition **/
 
@@ -1421,6 +1447,8 @@
     
   %exit:
   
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
   %** Restore system options **;
   
   %Pop_option( obs )
@@ -1429,5 +1457,4 @@
 
 %mend Create_metadata_html;
 
-/** End Macro Definition **/
 

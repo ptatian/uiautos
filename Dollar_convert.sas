@@ -1,50 +1,58 @@
-/**************************** DOLLAR_CONVERT ***************************
-
- Macro Name: Dollar_convert.sas
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Dollar_convert
 
  Description: Converts dollars using CPI.
- Use Category: Within data step
-
+ 
+ Use: Within data step
+ 
  Author: Peter Tatian
+ 
+***********************************************************************/
 
- Date of approval: 04/02/2012
- Approvers: Amos Budde
- SAS Version: 9.1
+%macro Dollar_convert( 
+    amount1,            /* variable with original dollar amount */
+    amount2,            /* variable to put converted dollar amount */
+    from,               /* year of amount1 (numeric var or value) */
+    to,                 /* year of amount2 (numeric var or value) */
+    series=CUUR0000SA0, /* CPI series to use. See USAGE NOTES. */
+    quiet=Y,            /* suppress notes to the log (Y/N) */
+    mprint=N            /* control MPRINT= option (Y/N) (DEPRECATED) */
+    );
 
-/**************************** USAGE NOTES ***************************
- 
- Two CPI series are allowed:
-   U.S. All items, 1982-84=100 - CUUR0000SA0 (default)
-   U.S. All items less shelter, 1982-84=100 - CUUR0000SA0L2 
- 
- The mprint option no longer does anything, but it exists as a parameter so programs using it do not break. 
- 
- SAMPLE CALL: See testing section below.
- 
-/************************* UPDATE NOTES ******************************
-
- TO UPDATE DATA, go to: http://data.bls.gov/pdq/querytool.jsp?survey=cu
-   1) Area: US city average
-   2) Items: All items (series=CUUR0000SA0)
-             All items less shelter (series=CUUR0000SA0L2)
-   3) Not Seasonally Adjusted
+  /*************************** USAGE NOTES *****************************
    
- When adding data for a new year, be sure to add a new 
- CPI_ macro variable for that year to the %local declaration list
- and update the value of MAX_YEAR. 
+   SAMPLE CALL: 
+     %dollar_convert( amount, year2000, 1980, 2000, series=CUUR0000SA0L2 )
+       converts dollar values in AMOUNT from 1980 to 2000 dollars using
+       CPI/All items less shelter and saves new values in var YEAR2000
 
-/****************************** CAUTIONS *****************************
- Dollar_Convert uses both positional and definitional parameters. Be careful that 
- the the order is correct for the first 4 parameters. 
+   NOTES:
+    - Dollar_Convert uses both positional and definitional parameters. 
+    - Be careful that the order is correct for the first 4 parameters. 
+    - Two CPI series are supported:
+        CUUR0000SA0 : U.S. All items, 1982-84=100 (default)
+        CUUR0000SA0L2 : U.S. All items less shelter, 1982-84=100
+    - The mprint option has been deprecated, but it exists as a 
+      parameter so programs using it do not break. 
 
- Series must equal exactly CUUR0000SA0 or CUUR0000SA0L2
+  *********************************************************************/
 
- SUBMACROS CALLED: err_mput, note_mput, datatyp (sas autocall macro)
+  /*************************** UPDATE NOTES ****************************
 
-/************************EDITING HISTORY *************************************   
+   TO UPDATE DATA, go to: http://data.bls.gov/pdq/querytool.jsp?survey=cu
+     1) Area: US city average
+     2) Items: All items (series=CUUR0000SA0)
+               All items less shelter (series=CUUR0000SA0L2)
+     3) Not Seasonally Adjusted
+     
+   When adding data for a new year, be sure to add a new 
+   CPI_ macro variable for that year to the %local declaration list
+   and update the value of MAX_YEAR. 
+
    07/28/05  Created Peter A. Tatian
    10/19/05  Expanded CUUR0000SA0 back to 1980.
-  Added MPRINT= option.
+             Added MPRINT= option.
    04/03/06  Updated 2005 CPI to full year.  Added 2006 (Jan & Feb only).
    08/07/06  Updated 2006 CPI to half year.
    12/31/06  Changed earliest year to 1979.
@@ -54,7 +62,7 @@
    02/02/09  Updated 2008 CPI to full year.
    07/06/09  Updated 2009 CPI to Jan-May average.
    09/02/09  Updated 2009 CPI to half year.
-  Added series CUUR0000SA0L2 (All items less shelter).
+             Added series CUUR0000SA0L2 (All items less shelter).
    03/02/10  Updated 2009 to full year.
    05/20/10  Updated 2010 avg first 4 months.
    09/29/10  Updated 2010 to half year.
@@ -67,22 +75,11 @@
    07/11/13  GM Updated 2012 to full year.
    02/3/14   BL Updated 2013 to full year.
    07/01/14  RP Updated 2014 to half year
- ****************************************************************************/
 
-/************************ MACRO AND PARAMETERS ************************/
+  *********************************************************************/
 
-%macro Dollar_convert( 
-    amount1,            /* variable with original dollar amount */
-    amount2,            /* variable to put converted dollar amount */
-    from,               /* year of amount1 */
-    to,                 /* year of amount2 */
-    series=CUUR0000SA0, /* CPI series to use. Default is CUUR0000SA0. The other option is CUUR0000SA0L2 */
-    quiet=Y,            /* suppresses notes to the log (Y/N) */
-    mprint=N            /* control MPRINT= option (Y/N) [currently inactive] */
-    );
-
-  %***** ***** ***** SET UP ***** ***** *****;
- 
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
   %local _i MIN_YEAR MAX_YEAR _dcnv_array;
   
   %local
@@ -95,12 +92,6 @@
 
   %global _dcnv_count;
 
-  %***** ***** ***** ERROR CHECKS ***** ***** *****;
-
-  %** Error checks are already embedded into the macro. We will leave them there to not  
-      break programs that rely on the current version (AB - 1/2/12) **;
-
-  %***** ***** ***** BODY ***** ***** *****;
   %let MIN_YEAR = 1979;
   %let MAX_YEAR = 2014;
 
@@ -203,6 +194,15 @@
     %goto exit_macro;
   %end;
   
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+  %** Error checks are already embedded into the macro. We will leave them there to not  
+      break programs that rely on the current version (AB - 1/2/12) **;
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+  
   %if &_dcnv_count = %then %let _dcnv_count = 1;
   %else %let _dcnv_count = %eval( &_dcnv_count + 1 );
   
@@ -239,25 +239,21 @@
 
   %exit_macro:
   
-  %if %upcase( &quiet ) = N %then %do;
+  %if %mparam_is_no( &quiet ) %then %do;
     %note_mput( macro=Dollar_convert, msg=Result=&result )
   %end;
 
+
   %***** ***** ***** CLEAN UP ***** ***** *****;
 
-    %** No cleanup needed **;
 
 %mend Dollar_convert;
 
-/** END MACRO DEFINITION **/
 
+/************************ UNCOMMENT TO TEST ***************************
 
-/************ UNCOMMENT TO TEST ****************************
-
-filename macrodev "D:\Projects\UISUG\MacroDev";
-
-filename uiautos "K:\Metro\ABudde\SAS Macro Lib\Macros";
-options sasautos=(macrodev uiautos sasautos);
+filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
+options sasautos=(uiautos sasautos);
 options mprint nosymbolgen nomlogic;
 options msglevel=i;
 
@@ -335,11 +331,11 @@ run;
 
 data test;
 	set input;
-	%dollar_convert( amount, year2000 , 1980, 2000, quiet=N, series=CUUR0000SA0L2 );
-	%dollar_convert( amount, year2010 , 1980, 2010, quiet=N, series=CUUR0000SA0L2 );
+	%dollar_convert( amount, year2000 , 1980, 2000, quiet=N, series=CUUR0000SA0L2 )
+	%dollar_convert( amount, year2010 , 1980, 2010, quiet=N, series=CUUR0000SA0L2 )
 run;
 
 proc print data=test; run;
 
-/*****************************************************************/
+/**********************************************************************/
 
