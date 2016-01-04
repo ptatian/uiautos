@@ -1,0 +1,1470 @@
+<!doctype html public "-//w3c//dtd html 4.0 final//en">
+<html>
+   <head>
+      <title>K:\Metro\PTatian\UISUG\Uiautos/create_metadata_html.sas</title>
+   </head>
+   <body>
+      <pre>
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Create_metadata_html
+
+ Description: Creates HTML pages from metadata repository created by the
+ Update_metadata() macro.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
+
+%macro Create_metadata_html( 
+         meta_lib= ,         /** Library reference for metadata data sets **/
+         meta_pre= meta,     /** Data set name prefix for metadata data sets **/
+         meta_title= ,       /** Title for metadata HTML pages **/
+         update_months=12,   /** Number of past months to show on update page **/
+         rss=N,              /** Create RSS update feed? **/
+         rss_url=,           /** Prefix URL for RSS update feed **/
+         rss_timezone=EST,   /** Timezone for RSS date/time stamps **/
+         creator_fmt=,       /** Format for FileCreator (lowercase values) **/
+         error_notify=,      /** Email addresses to notify when error occurs (DEPRECATED) **/
+         html_folder= ,      /** Folder for HTML files **/
+         html_pre= meta,     /** Filename prefix for HTML files **/
+         html_suf= html,     /** Filename suffix for HTML files **/
+         html_title= Metadata -,  /** HTML title prefix **/
+         html_stylesht= ,    /** HTML CSS stylesheet **/
+         html_head= ,        /** HTML header tags **/
+         html_pg_header= ,   /** HTML page header **/
+         html_pg_footer= ,   /** HTML page footer **/
+         html_altbgcol=#CCFFCC,  /** Color for alternating backround rows **/
+         html_meta_tags=
+           "  &lt;meta http-equiv=""Content-type"" content=""text/html;charset=UTF-8""&gt;" /
+           "  &lt;meta name=""generator"" content=""SAS macro Create_metadata_html()""&gt;" /
+           "  &lt;meta name=""robots"" content=""noindex,nofollow""&gt;"
+           /** HTML page meta tags **/
+       );
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Create_metadata_html( 
+              meta_lib= metadata,
+              meta_pre= meta,
+              meta_title= NeighborhoodInfo DC Metadata System,
+              update_months= 12,
+              creator_fmt= $creator.,
+              html_folder= L:\Metadata\,
+              html_pre= meta,
+              html_suf= html,
+              html_title= NeighborhoodInfo DC Metadata -,
+              html_stylesht= metadata_style.css
+            )
+         create metadata HTML pages in folder L:\Metadata\
+         Format $creator is used to convert FileCreator initials to 
+         full names.
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   12/31/03  Peter A. Tatian
+   09/01/04  Add formatted values to HTML pages
+             Revised library list
+   11/11/04  Added nav bars, web page time stamp, note for suppressed
+             formatted values.  "Back to file" link on var values page goes 
+             directly to variable entry on file page.  Format name displayed
+             on var values page.
+   12/20/04  Supports suppression of descriptive statistics for num. vars.
+             Suppress "Metadata updated" date on library page if no files.
+   03/30/05  Display "(blank)" if variable value is blank string.
+             Use MMDDYY format for MEAN, MIN, MAX of SAS date values.
+   03/31/05  Added html_meta_tags= option.
+   05/06/05  File history: Removed library &amp; data set lines,
+             process column. Prevent file date/time from wrapping.
+             File: Added list of sorted by variables.
+   05/13/05  If no formated value (_FVAL) file, will still create values page
+             if numeric variables.
+   09/06/05  Set OPTIONS OBS=MAX to avoid data loss when updating metadata.
+   03/08/08  Updated date/time format list to SAS 9.2 formats.
+             Added update_months= parameter and recent updates page.
+   03/10/08  Removed "Metadata updated" from bottom of updates page.
+   03/11/08  Fixed Proc Print problem w/FileDesc values that are too long. 
+   03/06/09  Added creator_fmt= option to format FileCreator.
+             Added option to create RSS feed with latest updates 
+             (options rss=, rss_url=, rss_timezone=).
+   10/12/11  PAT Added error_notify= option.
+                 Report error if no variable records for file. 
+   10/14/11  PAT Added local macro variable declaration.
+                 Updated HTML document type declaration (html_doctype).
+                 Added charset meta tag to html_meta_tags=.
+                 Fixed HTML validation problem with &lt;A NAME= &gt; tags in 
+                 data set and value pages.
+                 Fixed problem with email error notification by switching
+                 from X statement to system() function.
+   10/18/11  PAT Corrected problems with "Metadata updated:" dates on 
+                 library/file list and history pages (wasn't using the 
+                 latest dates before). 
+   10/21/11  PAT Added macro starting and ending messages to LOG. 
+   03/30/14  PAT Added Creator process (FileProcess) to file history pages.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local html_doctype date_fmts cur_dt_raw cur_tm_raw cur_dt cur_tm i em;
+  
+  %Note_mput( macro=Create_metadata_html, msg=Macro (version 10/21/11) starting. )
+  
+  %** HTML document type declaration **;
+  
+  %let html_doctype = "&lt;!DOCTYPE HTML PUBLIC ""-//W3C//DTD HTML 4.0 Transitional//EN"" ""http://www.w3.org/TR/1998/REC-html40-19980424/loose.dtd""&gt;";
+
+  %** Date formats (updated for SAS 9.2) **;
+
+  %let date_fmts =
+    "/DATE/DATEAMPM/DATETIME/DAY/DDMMYY/" ||
+    "/DDMMYYB/DDMMYYC/DDMMYYD/DDMMYYN/DDMMYYP/DDMMYYS/" ||
+    "/DOWNAME/DTDATE/DTMONYY/DTWKDATX/DTYEAR/DTYYQC/" ||
+    "/EURDFDD/EURDFDE/EURDFDN/EURDFDT/EURDFDWN/EURDFMN/EURDFMY/EURDFWDX/EURDFWKX/" ||
+    "/HDATE/HEBDATE/HHMM/HOUR/JULDAY/JULIAN/MINGUO/MMDDYY/" ||
+    "/MMDDYYB/MMDDYYC/MMDDYYD/MMDDYYN/MMDDYYP/MMDDYYS/" ||
+    "/MMSS/MMYY/" ||
+    "/MMYYC/MMYYD/MMYYN/MMYYP/MMYYS/" ||
+    "/MONNAME/MONTH/MONYY/NENGO/NLDATE/NLDATEMN/NLDATEW/NLDATEWN/NLDATM/NLDATMAP/" ||
+    "/NLDATMTM/NLDATMW/NLTIMAP/NLTIME/PDJULG/PDJULI/QTR/QTRR/TIME/TIMEAMPM/" ||
+    "/TOD/WEEKDATE/WEEKDATX/WEEKDAY/WEEKU/WEEKV/WEEKW/WORDDATE/WORDDATX/YEAR/YYMM/" ||
+    "/YYMMC/YYMMD/YYMMN/YYMMP/YYMMS/" ||
+    "/YYMMDD/" ||
+    "/YYMMDDB/YYMMDDC/YYMMDDD/YYMMDDN/YYMMDDP/YYMMDDS/" ||
+    "/YYMON/YYQ/" ||
+    "/YYQC/YYQD/YYQN/YYQP/YYQS/" ||
+    "/YYQR/" ||
+    "/YYQRC/YYQRD/YYQRN/YYQRP/YYQRS/";
+
+  %** Get current date &amp; time for stamping HTML pages **;
+  
+  %let cur_dt_raw = %sysfunc( date( ) );
+  %let cur_tm_raw = %sysfunc( time( ) );
+
+  %let cur_dt = %sysfunc( putn( &amp;cur_dt_raw, worddatx12. ) );
+  %let cur_tm = %sysfunc( putn( &amp;cur_tm_raw, timeampm8. ) );
+  
+  %** Save current OBS= setting then set to MAX **;
+
+  %Push_option( obs )
+  
+  options obs=max;
+  %Note_mput( macro=Create_metadata_html, msg=OPTIONS OBS set to MAX for metadata processing. )
+  
+  %** Set update_months= parameter to 0 if missing **;
+  
+  %if &amp;update_months = %then %let update_months = 0;
+  
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+
+  *****************************************;
+  ****  Create library list page       ****;
+  *****************************************;
+  
+  filename fl_out "&amp;html_folder.&amp;html_pre._libraries.&amp;html_suf";
+  
+  data _null_;
+  
+    length link $ 255;
+    
+    retain LastMetadataUpdated altrow 0;
+  
+    file fl_out;
+    
+    set &amp;meta_lib..&amp;meta_pre._libs end=last; 
+        
+    if _n_ = 1 then do;
+    
+      ** Page header **;
+      
+      put &amp;html_doctype;
+      put "&lt;html&gt;";
+      put "&lt;head&gt;";
+      put "  &lt;title&gt;&amp;html_title Library list&lt;/title&gt;";
+      
+      if "&amp;html_stylesht" ~= "" then
+        put "  &lt;link rel=""stylesheet"" type=""text/css"" href=""&amp;html_stylesht""&gt;";
+        
+      put &amp;html_meta_tags;
+      put "&lt;/head&gt;" /;
+      put "&lt;body&gt;" /;
+      
+      ** Copy user supplied header **;
+    
+      %if %length( &amp;html_pg_header ) ne 0 %then %do;
+        put "&amp;html_pg_header" /;
+      %end;
+      
+      ** Page title &amp; nav bar **;
+      
+      put "&lt;h1&gt;&amp;meta_title&lt;/h1&gt;" /;
+      
+      put "&lt;b&gt;Libraries&lt;/b&gt;" /;
+      
+      ** Link to updates page (if created) **;
+      
+      %if &amp;update_months &gt; 0 %then %do;
+      
+        put "&lt;p&gt;&lt;a href=""&amp;html_pre._updates.&amp;html_suf""&gt;Recent updates&lt;/a&gt;&lt;/p&gt;" /;
+      
+      %end;
+      
+      ** Start table **;
+      
+      put "&lt;h2&gt;Library List&lt;/h2&gt;" /;
+      
+      put "&lt;table width=""100%"" cellspacing=""0"" cellpadding=""2""&gt;" /;
+      
+      put "&lt;tr&gt;";
+
+      put '&lt;th align="left" valign="bottom"&gt;Library Name&lt;/th&gt;';
+      put "&lt;th align=""left"" valign=""bottom""&gt;Description&lt;/th&gt;";
+      
+      put "&lt;/tr&gt;" /;
+    
+    end;
+    
+    ** List of libraries **;
+    
+    link = "&amp;html_pre._" || trim( lowcase( library ) ) || ".&amp;html_suf";
+    
+    if altrow and "&amp;html_altbgcol" ~= "" then
+      put "&lt;tr bgcolor=""&amp;html_altbgcol""&gt;";
+    else
+      put "&lt;tr&gt;";
+      
+    Library = %capitalize( Library );
+    
+    put "&lt;td&gt;&lt;a href=" link "&gt;" Library "&lt;/a&gt;&lt;/td&gt;";
+    put '&lt;td valign="top"&gt;' LibDesc '&lt;/td&gt;';
+    put "&lt;/tr&gt;" /;
+
+    altrow = mod( altrow + 1, 2 );
+    
+    ** Page footer **;
+    
+    if last then do;
+
+      put "&lt;/table&gt;" /;
+      
+      put "&lt;p&gt;&lt;small&gt;&lt;i&gt;Web page updated: " @;
+
+      put "&amp;cur_dt," '&amp;nbsp;' "&amp;cur_tm&lt;/i&gt;&lt;/small&gt;&lt;/p&gt;" /;
+      
+      %if %length( &amp;html_pg_footer ) ne 0 %then %do;
+        put "&amp;html_pg_footer" /;
+      %end;
+      
+      put "&lt;/body&gt;";
+      put "&lt;/html&gt;";
+
+    end;
+    
+  run;  
+
+  *****************************************;
+  ****  Create library/file list pages ****;
+  *****************************************;
+  
+  ** Add file names to variable data **;
+  
+  data &amp;meta_pre._files;
+  
+    merge &amp;meta_lib..&amp;meta_pre._files (in=_in_files)
+          &amp;meta_lib..&amp;meta_pre._libs  (in=_in_libs); 
+       by Library;
+    
+    length html_file $ 255;
+    
+    in_files = _in_files;
+    in_libs = _in_libs;
+    
+    if not in_libs then do;
+      %warn_put( macro=Create_metadata_html, msg="Library " library "is not registered." )
+      delete;
+    end;
+    
+    html_file = "&amp;html_folder.&amp;html_pre._" || trim( lowcase( library ) ) || 
+                ".&amp;html_suf";
+  
+  run;
+  
+  proc print data=&amp;meta_pre._files;
+    format FileRestrict FileDesc $40.;
+    title2 "&amp;meta_pre._files";
+  run;
+  title2;
+  
+  data _null_;
+  
+    length link $ 255;
+    
+    retain LastMetadataUpdated altrow;
+  
+    set &amp;meta_pre._files;
+      by library;
+        
+    file fl_out filevar=html_file;
+    
+    if first.library then do;
+    
+      Library = %capitalize( Library );
+      LastMetadataUpdated = .;
+        
+      ** Page header **;
+      
+      put &amp;html_doctype;
+      put "&lt;html&gt;";
+      put "&lt;head&gt;";
+      put "  &lt;title&gt;&amp;html_title " library "library&lt;/title&gt;";
+      
+      if "&amp;html_stylesht" ~= "" then
+        put "  &lt;link rel=""stylesheet"" type=""text/css"" href=""&amp;html_stylesht""&gt;";
+        
+      put &amp;html_meta_tags;
+      put "&lt;/head&gt;" /;
+      put "&lt;body&gt;" /;
+      
+      ** Copy user supplied header **;
+    
+      %if %length( &amp;html_pg_header ) ne 0 %then %do;
+        put "&amp;html_pg_header" /;
+      %end;
+      
+      ** Page title &amp; nav bar **;
+      
+      put "&lt;h1&gt;&amp;meta_title&lt;/h1&gt;" /;
+      
+      put "&lt;a href=""&amp;html_pre._libraries.&amp;html_suf""&gt;Libraries&lt;/a&gt;" ' &amp;gt;';
+      put "&lt;b&gt;" library "&lt;/b&gt;" /;
+      
+      put "&lt;h2&gt;File list for " library "library&lt;/h2&gt;" /;
+      
+      ** Start table **;
+      
+      put "&lt;table width=""100%"" cellspacing=""0"" cellpadding=""2""&gt;" /;
+      
+      put "&lt;tr&gt;";
+
+      put '&lt;th align="left" valign="bottom"&gt;File Name&lt;/th&gt;';
+      put "&lt;th align=""left"" valign=""bottom""&gt;Description&lt;/th&gt;";
+      put "&lt;th align=""left"" valign=""bottom""&gt;Last&lt;br&gt;Updated&lt;/th&gt;";
+      
+      put "&lt;/tr&gt;" /;
+    
+      altrow = 0;
+
+    end;
+    
+    ** List of files **;
+    
+    if in_files then do;
+    
+      link = '"' || trim( lowcase( Library ) ) || '"';
+      
+      LastMetadataUpdated = max( LastMetadataUpdated, MetadataUpdated );
+
+      link = "&amp;html_pre._" || trim( lowcase( library ) ) || 
+             "_" || trim( lowcase( FileName ) ) || ".&amp;html_suf";
+      
+      dt = datepart( FileUpdated );
+      
+      FileName = %capitalize( FileName );
+      
+      if altrow and "&amp;html_altbgcol" ~= "" then
+        put "&lt;tr bgcolor=""&amp;html_altbgcol""&gt;";
+      else
+        put "&lt;tr&gt;";
+      
+      put '&lt;td valign="top"&gt;&lt;a href="' link '"&gt;' FileName "&lt;/a&gt;&lt;/td&gt;";
+      put "&lt;td valign=""top""&gt;" FileDesc "&lt;/td&gt;";
+      put "&lt;td valign=""top""&gt;" dt mmddyys8. "&lt;/td&gt;";
+      put "&lt;/tr&gt;" /;
+      
+      altrow = mod( altrow + 1, 2 );
+    
+    end;
+    else do;
+    
+      put "&lt;tr&gt;";
+      put '&lt;td valign="top" colspan="3"&gt;&lt;i&gt;No files registered in this library.&lt;/i&gt;&lt;/td&gt;';
+      put "&lt;/tr&gt;";
+      
+    end;
+	    
+    ** Page footer **;
+    
+    if last.library then do;
+
+      put "&lt;/table&gt;" /;
+      
+      if dt ~= . then do;
+      
+        dt = datepart( LastMetadataUpdated );
+        tm = timepart( LastMetadataUpdated );
+
+        put "&lt;p&gt;&lt;small&gt;&lt;i&gt;Metadata updated: " @;
+
+        put dt worddatx12. ',&amp;nbsp;' tm timeampm8. "&lt;/i&gt;&lt;/small&gt;&lt;br&gt;" /;
+        
+      end;
+      else do;
+        put "&lt;p&gt;" @;
+      end;
+              
+      put "&lt;small&gt;&lt;i&gt;Web page updated: " @;
+
+      put "&amp;cur_dt," '&amp;nbsp;' "&amp;cur_tm&lt;/i&gt;&lt;/small&gt;&lt;/p&gt;" /;
+      
+      %if %length( &amp;html_pg_footer ) ne 0 %then %do;
+        put "&amp;html_pg_footer" /;
+      %end;
+      
+      put "&lt;/body&gt;";
+      put "&lt;/html&gt;";
+
+    end;
+    
+  run;  
+
+
+  ****************************************************************;
+  ****  Create separate data set pages with list of variables ****;
+  ****************************************************************;
+  
+  ** Add file names to variable data **;
+  
+  data &amp;meta_pre._vars;
+  
+    set &amp;meta_lib..&amp;meta_pre._vars;
+    
+    length html_file $ 255;
+    
+    html_file = "&amp;html_folder.&amp;html_pre._" || trim( lowcase( library ) ) || 
+                "_" || trim( lowcase( FileName ) ) || ".&amp;html_suf";
+  
+  run;
+  
+  *proc print data=&amp;meta_pre._vars;
+  *  title2 "File = &amp;meta_pre._vars";
+    
+  
+  ** Create data set pages **;
+  
+  data _null_;
+  
+    length link cname sys_cmd $ 255;
+  
+    retain altrow;
+
+    merge &amp;meta_pre._vars (in=in_vars) &amp;meta_lib..&amp;meta_pre._files; 
+      by library filename;
+
+    sys_cmd = '';
+
+    ** Check that file has matching variable records **;
+    if not in_vars then do;
+    
+      %err_put( macro=CREATE_METADATA_HTML, 
+                msg="No matching variable record for file: " library= filename= )
+
+      ** Notify by email of error **;
+      %if %length( &amp;error_notify ) &gt; 0 %then %do;
+        %if &amp;SYSSCP ~= WIN %then %do;
+          %let i = 1;
+          %let em = %scan( &amp;error_notify, &amp;i, %str( ) );
+          %do %until ( &amp;em = );
+            %note_mput( macro=CREATE_METADATA_HTML, msg=Email notification being sent to &amp;em.. )
+            sys_cmd = 
+              "mail /subject=""CREATE_METADATA_HTML error: No matching variable record for file: " || 
+              "library=" || trim(library) || " filename=" || trim(filename) ||
+              """ nl: ""&amp;em""";
+            rc = system( sys_cmd );
+            /***X mail /subject="CREATE_METADATA_HTML() error: No matching variable record for file" nl: "&amp;em";***/
+            %let i = %eval( &amp;i + 1 );
+            %let em = %scan( &amp;error_notify, &amp;i, %str( ) );
+          %end;
+        %end;
+      %end;
+  
+      return;   ** Skip to next record **;
+    
+    end;
+        
+    file var_out filevar=html_file;
+    
+    library = %capitalize( library );
+    filename = %capitalize( filename );
+    
+    cname = trim( library ) || "." || trim( filename );
+        
+    if first.filename then do;
+    
+      ** Page header **;
+      
+      put &amp;html_doctype;
+      put "&lt;html&gt;";
+      put "&lt;head&gt;";
+      put "  &lt;title&gt;&amp;html_title " cname "data set&lt;/title&gt;";
+      
+      if "&amp;html_stylesht" ~= "" then
+        put "  &lt;link rel=""stylesheet"" type=""text/css"" href=""&amp;html_stylesht""&gt;";
+        
+      put &amp;html_meta_tags;
+      put "&lt;/head&gt;" /;
+      put "&lt;body&gt;" /;
+      
+      ** Copy user supplied header **;
+    
+      %if %length( &amp;html_pg_header ) ne 0 %then %do;
+        put "&amp;html_pg_header" /;
+      %end;
+      
+      ** Page title &amp; nav bar **;
+      
+      put "&lt;h1&gt;&amp;meta_title&lt;/h1&gt;" /;
+
+      put "&lt;a href=""&amp;html_pre._libraries.&amp;html_suf""&gt;Libraries&lt;/a&gt;" ' &amp;gt;';
+
+      link = "&lt;a href=&amp;html_pre._" || trim( lowcase( library ) ) || ".&amp;html_suf&gt;" ||
+             trim( library ) || '&lt;/a&gt; &amp;gt;';
+
+      put link;
+
+      put "&lt;b&gt;" filename "&lt;/b&gt;" /;
+
+      put "&lt;h2&gt;" cname "&lt;/h2&gt;" /;
+      
+      ** Start data set info **;
+      
+      put "&lt;table border=""0"" width=""100%"" cellspacing=""0"" cellpadding=""4""&gt;" /;
+      
+      *link = "&amp;html_pre._files.&amp;html_suf#" || trim( lowcase( library ) );
+      link = "&amp;html_pre._" || trim( lowcase( library ) ) || ".&amp;html_suf" ;
+    
+      put "&lt;tr&gt;";
+      put "&lt;th align=""left"" valign=""top""&gt;Library:&lt;/th&gt;";
+      put "&lt;td align=""left"" valign=""top""&gt;&lt;a href=""" link """&gt;" Library "&lt;/a&gt;&lt;/td&gt;";
+      put "&lt;/tr&gt;";
+
+      put "&lt;tr&gt;";
+      put "&lt;th align=""left"" valign=""top""&gt;Data set:&lt;/th&gt;";
+      put "&lt;td align=""left"" valign=""top""&gt;" FileName "&lt;/td&gt;";
+      put "&lt;/tr&gt;";
+
+      put "&lt;tr&gt;";
+      put "&lt;th align=""left"" valign=""top""&gt;Description:&lt;/th&gt;";
+      put "&lt;td align=""left"" valign=""top""&gt;" FileDesc "&lt;/td&gt;";
+      put "&lt;/tr&gt;";
+
+      put "&lt;tr&gt;";
+      put "&lt;th align=""left"" valign=""top""&gt;File format:&lt;/th&gt;";
+      put "&lt;td align=""left"" valign=""top""&gt;" FileFmt "&lt;/td&gt;";
+      put "&lt;/tr&gt;";
+
+      put "&lt;tr&gt;";
+      put "&lt;th align=""left"" valign=""top""&gt;No. observations:&lt;/th&gt;";
+      put "&lt;td align=""left"" valign=""top""&gt;" NumObs comma16. "&lt;/td&gt;";
+      put "&lt;/tr&gt;";
+      
+      if FileSortedBy ~= "" then do;
+        put "&lt;tr&gt;";
+        put "&lt;th align=""left"" valign=""top""&gt;Sorted by:&lt;/th&gt;";
+        put "&lt;td align=""left"" valign=""top""&gt;" FileSortedBy "&lt;/td&gt;";
+        put "&lt;/tr&gt;";
+      end;
+
+      put "&lt;tr&gt;";
+      put "&lt;th align=""left"" valign=""top""&gt;Restrictions:&lt;/th&gt;";
+      put "&lt;td align=""left"" valign=""top""&gt;" FileRestrict "&lt;/td&gt;";
+      put "&lt;/tr&gt;";
+      
+      %if &amp;creator_fmt ~= %then %do;
+        link = tranwrd( put( lowcase( FileCreator ), &amp;creator_fmt ), ' ', '&amp;nbsp;' );
+      %end;
+      %else %do;
+        link = FileCreator;
+      %end;
+
+      put "&lt;tr&gt;";
+      put "&lt;th align=""left"" valign=""top""&gt;Creator:&lt;/th&gt;";
+      *put "&lt;td align=""left"" valign=""top""&gt;" FileCreator "&lt;/td&gt;";
+      put "&lt;td align=""left"" valign=""top""&gt;" link "&lt;/td&gt;";
+      put "&lt;/tr&gt;";
+
+      put "&lt;tr&gt;";
+      put "&lt;th align=""left"" valign=""top""&gt;Creator process:&lt;/th&gt;";
+      put "&lt;td align=""left"" valign=""top""&gt;" FileProcess "&lt;/td&gt;";
+      put "&lt;/tr&gt;";
+
+      dt = datepart( FileUpdated );
+      tm = timepart( FileUpdated );
+
+      link = "&amp;html_pre._" || trim( lowcase( library ) ) || 
+                "_" || trim( lowcase( FileName ) ) || "_h.&amp;html_suf";
+  
+      put "&lt;tr&gt;";
+      put "&lt;th align=""left"" valign=""top""&gt;Last updated:&lt;/th&gt;";
+      put "&lt;td align=""left"" valign=""top""&gt;" dt worddatx12. ',&amp;nbsp;' tm timeampm8. ;
+      put '&amp;nbsp;&amp;nbsp;-&amp;nbsp;&amp;nbsp;';
+      put "&lt;a href=""" link """&gt;Revision history&lt;/a&gt;";
+      put "&lt;/td&gt;";
+      
+      put "&lt;/tr&gt;";
+
+      put "&lt;/table&gt;" /;
+      
+      put "&lt;hr&gt;" /;
+      
+      ** Start variable list **;
+      
+      put "&lt;table border=""0"" width=""100%"" cellspacing=""0"" cellpadding=""4""&gt;" /;
+      
+      put "&lt;tr&gt;";
+
+      put "&lt;th align=""left"" valign=""bottom""&gt;Variable name&lt;/th&gt;";
+      put "&lt;th align=""left"" valign=""bottom""&gt;Type&lt;/th&gt;";
+      put "&lt;th align=""left"" valign=""bottom""&gt;Values&lt;/th&gt;";
+      put "&lt;th align=""left"" valign=""bottom""&gt;Description&lt;/th&gt;";
+      
+      put "&lt;/tr&gt;" /;
+      
+      altrow = 0;
+
+    end;
+    
+    ** Variable list and descriptions **;
+
+    VarName = lowcase( VarName );
+    
+    if altrow and "&amp;html_altbgcol" ~= "" then
+      put "&lt;tr bgcolor=""&amp;html_altbgcol""&gt;";
+    else
+      put "&lt;tr&gt;";
+
+    link = "&lt;td valign=""top""&gt;&lt;a name=""" || trim( VarName ) || """&gt;" || trim( VarName ) || "&lt;/a&gt;&lt;/td&gt;";
+    put link;
+
+    put "&lt;td valign=""top""&gt;" VarType "&lt;/td&gt;";
+
+    link = "&amp;html_pre._" || trim( lowcase( library ) ) || 
+           "_" || trim( lowcase( FileName ) ) || "_v.&amp;html_suf#" || trim( VarName );
+    
+    if ( VarType = "N" and _desc_n ~= . ) or ListFmtVals then
+      put "&lt;td valign=""top""&gt;&lt;a href=""" link """&gt;Values&lt;/a&gt;&lt;/td&gt;";
+    else
+      put "&lt;td valign=""top""&gt;" '&amp;nbsp;' "&lt;/td&gt;";
+    
+    put "&lt;td valign=""top""&gt;" VarDesc;
+    
+    if VarType = "C" then do;
+      put '&lt;br&gt;&amp;nbsp;&amp;nbsp;&lt;i&gt;Length=&lt;/i&gt;' VarLen;
+    end;
+    
+    if VarFmt ~= "" then do;
+      put '&lt;br&gt;&amp;nbsp;&amp;nbsp;&lt;i&gt;Format=&lt;/i&gt;' VarFmt;
+    end;
+    
+    put "&lt;/td&gt;";
+        
+    put "&lt;/tr&gt;" /;
+    
+    altrow = mod( altrow + 1, 2 );
+
+    ** Page footer **;
+    
+    if last.filename then do;
+
+      put "&lt;/table&gt;" /;
+
+      dt = datepart( MetadataUpdated );
+      tm = timepart( MetadataUpdated );
+
+      put "&lt;p&gt;&lt;small&gt;&lt;i&gt;Metadata updated: " @;
+
+      put dt worddatx12. ',&amp;nbsp;' tm timeampm8. "&lt;/i&gt;&lt;/small&gt;&lt;br&gt;" /;
+      
+      put "&lt;small&gt;&lt;i&gt;Web page updated: " @;
+
+      put "&amp;cur_dt," '&amp;nbsp;' "&amp;cur_tm&lt;/i&gt;&lt;/small&gt;&lt;/p&gt;" /;
+      
+      %if %length( &amp;html_pg_header ) ne 0 %then %do;
+        put "&amp;html_pg_footer" /;
+      %end;
+    
+      put "&lt;/body&gt;";
+      put "&lt;/html&gt;";
+
+    end;
+    
+  run;  
+
+  
+  ************************************************;
+  ****  Create separate variable value pages  ****;
+  ************************************************;
+
+  %let fval_exists = %Dataset_exists( &amp;meta_lib..&amp;meta_pre._fval );
+  
+  ** Add file names to variable &amp; value data **;
+  
+  data &amp;meta_pre._values;
+  
+    %if &amp;fval_exists %then %do;
+  
+      merge &amp;meta_lib..&amp;meta_pre._vars (in=_in_vars)
+            &amp;meta_lib..&amp;meta_pre._fval (in=_in_fval drop=VarName);
+        by Library FileName VarNameUC;
+      
+      in_vars = _in_vars;
+      in_fval = _in_fval;
+      
+    %end;
+    %else %do;
+    
+      set &amp;meta_lib..&amp;meta_pre._vars;
+        by Library FileName VarNameUC;
+      
+      in_vars = 1;
+      in_fval = 0;
+
+      Value = "";
+      FmtValue = "";
+      Frequency = .;
+      MaxFmtVals = .;
+
+    %end;
+    
+    if ( VarType = "N" and _desc_n ~= . ) or in_fval;
+    
+    length html_file $ 255;
+    
+    html_file = "&amp;html_folder.&amp;html_pre._" || trim( lowcase( library ) ) || 
+                "_" || trim( lowcase( FileName ) ) || "_v.&amp;html_suf";
+  
+    keep library filename VarName VarNameUC VarType VarDesc VarFmt _desc_: html_file
+       in_: Value FmtValue Frequency ListFmtVals MaxFmtVals;
+
+  run;
+  
+  data &amp;meta_pre._values_file;
+  
+    merge &amp;meta_pre._values (in=_in_values) &amp;meta_lib..&amp;meta_pre._files; 
+      by library filename;
+      
+    if _in_values; 
+    
+  run;
+  
+  ** Create variable value pages **;
+  
+  data _null_;
+  
+    length link cname $ 255;
+  
+    retain altrow 0;
+    
+    set &amp;meta_pre._values_file;
+      by Library FileName VarNameUC;
+
+    file var_out filevar=html_file;
+    
+    library = %capitalize( library );
+    filename = %capitalize( filename );
+    
+    cname = trim( library ) || "." || trim( filename );
+        
+    if first.filename then do;
+    
+      ** Page header **;
+      
+      put &amp;html_doctype;
+      put "&lt;html&gt;";
+      put "&lt;head&gt;";
+      put "  &lt;title&gt;&amp;html_title " cname "variable values&lt;/title&gt;";
+      
+      if "&amp;html_stylesht" ~= "" then
+        put "  &lt;link rel=""stylesheet"" type=""text/css"" href=""&amp;html_stylesht""&gt;";
+        
+      put &amp;html_meta_tags;
+      put "&lt;/head&gt;" /;
+      put "&lt;body&gt;" /;
+      
+      ** Copy user supplied header **;
+    
+      %if %length( &amp;html_pg_header ) ne 0 %then %do;
+        put "&amp;html_pg_header" /;
+      %end;
+      
+      ** Page title &amp; nav bar **;
+      
+      put "&lt;h1&gt;&amp;meta_title&lt;/h1&gt;" /;
+      
+      put "&lt;a href=""&amp;html_pre._libraries.&amp;html_suf""&gt;Libraries&lt;/a&gt;" ' &amp;gt;';
+
+      link = "&lt;a href=&amp;html_pre._" || trim( lowcase( library ) ) || ".&amp;html_suf&gt;" ||
+             trim( library ) || '&lt;/a&gt; &amp;gt;';
+
+      put link;
+
+      link = "&lt;a href=&amp;html_pre._" || trim( lowcase( library ) ) || "_" || 
+             trim( lowcase( filename ) ) || ".&amp;html_suf&gt;" ||
+             trim( filename ) || '&lt;/a&gt; &amp;gt;';
+
+      put link;
+
+      put "&lt;b&gt;Values&lt;/b&gt;" /;
+
+      put "&lt;h2&gt;Variable values for " cname "&lt;/h2&gt;" /;
+      
+      ** Start variable values **;
+      
+      put "&lt;table border=""0"" width=""100%"" cellspacing=""0"" cellpadding=""2""&gt;" /;
+      
+    end;
+    
+    VarName = lowcase( VarName );
+    
+    *link = "&amp;html_pre._" || trim( FileName ) || ".&amp;html_suf";
+    
+    ** Determine if date value **;
+    
+    if VarFmt ~= "" and index( %upcase(&amp;date_fmts), compress( "/" || VarFmt || "/" ) )
+      then
+        IsDateVal = 1;
+      else
+        IsDateVal = 0;
+
+    ** Variable name &amp; description **;
+    
+    if first.VarNameUC then do;
+    
+      put "&lt;tr&gt;";
+
+      if IsDateVal then
+        link = "&lt;td align=""left"" valign=""top"" colspan=""6""&gt;&lt;a name=""" || trim( VarName ) || """&gt;&lt;b&gt;" || 
+               trim( VarName ) || "&lt;/b&gt; - " || trim( VarDesc ) || " [SAS date value]&lt;/a&gt;&lt;/td&gt;";
+      else
+        link = "&lt;td align=""left"" valign=""top"" colspan=""6""&gt;&lt;a name=""" || trim( VarName ) || """&gt;&lt;b&gt;" || 
+               trim( VarName ) || "&lt;/b&gt; - " || trim( VarDesc ) || "&lt;/a&gt;&lt;/td&gt;";
+
+      put link;
+
+      link = "&amp;html_pre._" || trim( lowcase( library ) ) || 
+             "_" || trim( lowcase( FileName ) ) || ".&amp;html_suf" || "#" || trim( VarName );
+      
+      put '&lt;td align="right" valign="top" colspan="6"&gt;&lt;a href="' link '"&gt;&lt;small&gt;Back to file&lt;/small&gt;&lt;/a&gt;&lt;/td&gt;';
+
+      put "&lt;/tr&gt;";
+      
+      altrow = 0;
+      
+    end;
+    
+    ** Descriptive statistics for unformatted numeric variables **;
+    
+    if first.VarNameUC and not( in_fval ) and _desc_n ~= . then do;
+    
+      if IsDateVal then do;
+
+        put "&lt;tr&gt;";
+        put '&lt;td align="right" width="5%"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;N&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;Mean&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;StdDev (days)&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;Min&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;Max&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put '&lt;td align="right"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;/tr&gt;";
+        
+        put "&lt;tr&gt;";
+        put '&lt;td align="right"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_n comma16. "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_mean mmddyy10. "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_std best8. "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_min mmddyy10. "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_max mmddyy10. "&lt;/small&gt;&lt;/td&gt;";
+        put '&lt;td align="right"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;/tr&gt;";      
+
+      end;
+      else do;
+
+        put "&lt;tr&gt;";
+        put '&lt;td align="right" width="5%"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;N&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;Sum&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;Mean&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;StdDev&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;Min&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;Max&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put '&lt;td align="right"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;/tr&gt;";
+        
+        put "&lt;tr&gt;";
+        put '&lt;td align="right"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_n comma16. "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_sum best8. "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_mean best8. "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_std best8. "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_min best8. "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_max best8. "&lt;/small&gt;&lt;/td&gt;";
+        put '&lt;td align="right"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;/tr&gt;";
+
+      end;
+      
+    end;
+    
+    ** Formatted numeric &amp; character variables **;
+    
+    if in_fval then do;
+    
+      if first.VarNameUC then do;
+      
+        put "&lt;tr&gt;";
+        put '&lt;td align="right" width="5%"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;td align=""left"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;Value&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+
+        link = "(" || trim( VarFmt ) || ")";
+        
+        put "&lt;td align=""left"" width=""60%"" colspan=""4""&gt;&lt;small&gt;&lt;i&gt;Formatted value "
+            link 
+            "&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;N&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put '&lt;td align="right"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;/tr&gt;";
+        
+      end;
+      
+      if altrow and "&amp;html_altbgcol" ~= "" then
+        put "&lt;tr bgcolor=""&amp;html_altbgcol""&gt;";
+      else
+        put "&lt;tr&gt;";
+
+      put '&lt;td align="right"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+      
+      if Value = "" then
+        put "&lt;td valign=""top"" align=""left""&gt;&lt;small&gt;&lt;i&gt;(blank)&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+      else
+        put "&lt;td valign=""top"" align=""left""&gt;&lt;small&gt;" Value "&lt;/small&gt;&lt;/td&gt;";
+        
+      put "&lt;td valign=""top"" align=""left"" colspan=""4""&gt;&lt;small&gt;" FmtValue "&lt;/small&gt;&lt;/td&gt;";
+      put "&lt;td valign=""top"" align=""right""&gt;&lt;small&gt;" Frequency comma16. "&lt;/small&gt;&lt;/td&gt;";
+      put '&lt;td align="right"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+      put "&lt;/tr&gt;";
+
+      altrow = mod( altrow + 1, 2 );
+
+    end;
+    
+    if last.VarnameUC then do;
+
+      if MaxFmtVals &gt; 0 then do;
+        put "&lt;tr&gt;";
+        put '&lt;td align="right"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;td valign=""top"" align=""left"" colspan=""7""&gt;&lt;small&gt;" 
+            "&lt;i&gt;Only first " MaxFmtVals " values shown.&lt;/i&gt;"
+            "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;/tr&gt;";
+      end;
+      
+      put '&lt;tr&gt;&lt;td colspan="8"&gt;&lt;hr&gt;&lt;/td&gt;&lt;/tr&gt;';
+
+    end;
+    
+    ** Page footer **;
+    
+    if last.filename then do;
+
+      put "&lt;/table&gt;" /;
+
+      dt = datepart( MetadataUpdated );
+      tm = timepart( MetadataUpdated );
+
+      put "&lt;p&gt;&lt;small&gt;&lt;i&gt;Metadata updated: " @;
+
+      put dt worddatx12. ',&amp;nbsp;' tm timeampm8. "&lt;/i&gt;&lt;/small&gt;&lt;br&gt;" /;
+      
+      put "&lt;small&gt;&lt;i&gt;Web page updated: " @;
+
+      put "&amp;cur_dt," '&amp;nbsp;' "&amp;cur_tm&lt;/i&gt;&lt;/small&gt;&lt;/p&gt;" /;
+      
+      %if %length( &amp;html_pg_header ) ne 0 %then %do;
+        put "&amp;html_pg_footer" /;
+      %end;
+    
+      put "&lt;/body&gt;";
+      put "&lt;/html&gt;";
+
+    end;
+    
+  run;  
+
+  
+  *************************************;
+  ****  Create file history pages  ****;
+  *************************************;
+
+  ** Add file names to history data **;
+  
+  data &amp;meta_pre._history;
+  
+    set &amp;meta_lib..&amp;meta_pre._history;
+    
+    length html_file $ 255;
+    
+    html_file = "&amp;html_folder.&amp;html_pre._" || trim( lowcase( library ) ) || 
+                "_" || trim( lowcase( FileName ) ) || "_h.&amp;html_suf";
+  
+  run;
+
+  data _null_;
+  
+    length link cname $ 255;
+  
+    retain LastMetadataUpdated altrow 0;
+
+    set &amp;meta_pre._history; 
+      by library filename;
+        
+    file hist_out filevar=html_file;
+    
+    library = %capitalize( library );
+    filename = %capitalize( filename );
+    
+    cname = trim( library ) || "." || trim( filename );
+        
+    if first.filename then do;
+    
+      LastMetadataUpdated = .;
+
+      ** Page header **;
+      
+      put &amp;html_doctype;
+      put "&lt;html&gt;";
+      put "&lt;head&gt;";
+      put "  &lt;title&gt;&amp;html_title " cname "revision history&lt;/title&gt;";
+      
+      if "&amp;html_stylesht" ~= "" then
+        put "  &lt;link rel=""stylesheet"" type=""text/css"" href=""&amp;html_stylesht""&gt;";
+        
+      put &amp;html_meta_tags;
+      put "&lt;/head&gt;";
+      put ;
+      put "&lt;body&gt;";
+      put ;
+      
+      ** Copy user supplied header **;
+    
+      %if %length( &amp;html_pg_header ) ne 0 %then %do;
+        put "&amp;html_pg_header" /;
+      %end;
+      
+      ** Page title &amp; nav bar **;
+      
+      put "&lt;h1&gt;&amp;meta_title&lt;/h1&gt;" /;
+
+      put "&lt;a href=""&amp;html_pre._libraries.&amp;html_suf""&gt;Libraries&lt;/a&gt;" ' &amp;gt;';
+
+      link = "&lt;a href=&amp;html_pre._" || trim( lowcase( library ) ) || ".&amp;html_suf&gt;" ||
+             trim( library ) || '&lt;/a&gt; &amp;gt;';
+
+      put link;
+
+      link = "&lt;a href=&amp;html_pre._" || trim( lowcase( library ) ) || "_" || 
+             trim( lowcase( filename ) ) || ".&amp;html_suf&gt;" ||
+             trim( filename ) || '&lt;/a&gt; &amp;gt;';
+
+      put link;
+
+      put "&lt;b&gt;Revision history&lt;/b&gt;" /;
+
+      put "&lt;h2&gt;Revision history for " cname "&lt;/h2&gt;" /;
+      
+      ** Start history **;
+      
+      put "&lt;table border=""0"" width=""100%"" cellspacing=""0"" cellpadding=""4""&gt;" /;
+      
+      put "&lt;tr&gt;";
+
+      put "&lt;th align=""left"" valign=""bottom""&gt;Date/Time&lt;/th&gt;";
+      put "&lt;th align=""left"" valign=""bottom""&gt;Creator&lt;/th&gt;";
+      put "&lt;th align=""left"" valign=""bottom""&gt;Creator process&lt;/th&gt;";
+      put "&lt;th align=""left"" valign=""bottom""&gt;Revisions&lt;/th&gt;";
+      
+      put "&lt;/tr&gt;" /;
+      
+      altrow = 0;
+    
+    end;
+    
+    ** List of file revisions **;
+
+    LastMetadataUpdated = max( LastMetadataUpdated, MetadataUpdated );
+
+    dt = datepart( FileUpdated );
+    tm = timepart( FileUpdated );
+      
+    if altrow and "&amp;html_altbgcol" ~= "" then
+      put "&lt;tr bgcolor=""&amp;html_altbgcol""&gt;";
+    else
+      put "&lt;tr&gt;";
+    
+    link = put( dt, mmddyys8. ) || ' ' || put( tm, timeampm8. );
+    link = tranwrd( trim( left( compbl( link ) ) ), ' ', '&amp;nbsp;' );
+    
+    put "&lt;td valign=""top""&gt;" link "&lt;/td&gt;";
+    
+    %if &amp;creator_fmt ~= %then %do;
+      link = tranwrd( put( lowcase( FileCreator ), &amp;creator_fmt ), ' ', '&amp;nbsp;' );
+    %end;
+    %else %do;
+      link = FileCreator;
+    %end;
+    
+    put "&lt;td valign=""top""&gt;" link "&lt;/td&gt;";
+    
+    put "&lt;td valign=""top""&gt;" FileProcess "&lt;/td&gt;";
+
+    put "&lt;td valign=""top""&gt;" FileRevisions "&lt;/td&gt;";
+    
+    altrow = mod( altrow + 1, 2 );
+
+    ** Page footer **;
+    
+    if last.filename then do;
+
+      put "&lt;/table&gt;" /;
+
+      dt = datepart( LastMetadataUpdated );
+      tm = timepart( LastMetadataUpdated );
+
+      put "&lt;p&gt;&lt;small&gt;&lt;i&gt;Metadata updated: " @;
+
+      put dt worddatx12. ',&amp;nbsp;' tm timeampm8. "&lt;/i&gt;&lt;/small&gt;&lt;br&gt;" /;
+      
+      put "&lt;small&gt;&lt;i&gt;Web page updated: " @;
+
+      put "&amp;cur_dt," '&amp;nbsp;' "&amp;cur_tm&lt;/i&gt;&lt;/small&gt;&lt;/p&gt;" /;
+      
+      %if %length( &amp;html_pg_header ) ne 0 %then %do;
+        put "&amp;html_pg_footer" /;
+      %end;
+    
+      put "&lt;/body&gt;";
+      put "&lt;/html&gt;";
+
+    end;
+    
+  run;  
+  
+  ******************************************;
+  ****  Create latest file update page  ****;
+  ******************************************;
+
+  %if &amp;update_months &gt; 0 %then %do;
+
+    ** Select and sort update records from history data **;
+    
+    data &amp;meta_pre._updates;
+    
+      set &amp;meta_lib..&amp;meta_pre._history;
+      
+      where intck( 'month', datepart( FileUpdated ), date( ) ) &lt;= &amp;update_months;
+
+    run;
+    
+    proc sort data=&amp;meta_pre._updates;
+      by descending FileUpdated;
+      
+    ** HTML update page **;
+
+    filename updt_out "&amp;html_folder.&amp;html_pre._updates.&amp;html_suf";
+    
+    data _null_;
+    
+      length link cname $ 255;
+    
+      retain altrow 0 prev_dt '01jan2060'd;
+
+      set &amp;meta_pre._updates end=eof; 
+        by descending FileUpdated;
+          
+      file updt_out;
+      
+      library = %capitalize( library );
+      filename = %capitalize( filename );
+      
+      cname = trim( library ) || "." || trim( filename );
+          
+      if _n_ = 1 then do;
+      
+        ** Page header **;
+        
+        put &amp;html_doctype;
+        put "&lt;html&gt;";
+        put "&lt;head&gt;";
+        *put "  &lt;title&gt;&amp;html_title " cname "recent updates&lt;/title&gt;";
+        put "  &lt;title&gt;&amp;html_title Recent updates&lt;/title&gt;";
+        
+        if "&amp;html_stylesht" ~= "" then
+          put "  &lt;link rel=""stylesheet"" type=""text/css"" href=""&amp;html_stylesht""&gt;";
+          
+        put &amp;html_meta_tags;
+        put "&lt;/head&gt;";
+        put ;
+        put "&lt;body&gt;";
+        put ;
+        
+        ** Copy user supplied header **;
+      
+        %if %length( &amp;html_pg_header ) ne 0 %then %do;
+          put "&amp;html_pg_header" /;
+        %end;
+        
+        ** Page title &amp; nav bar **;
+        
+        put "&lt;h1&gt;&amp;meta_title&lt;/h1&gt;" /;
+
+        put "&lt;a href=""&amp;html_pre._libraries.&amp;html_suf""&gt;Libraries&lt;/a&gt;" ' &amp;gt;';
+
+        put "&lt;b&gt;Recent updates&lt;/b&gt;" /;
+
+        put "&lt;h2&gt;Recent file updates (previous &amp;update_months months)&lt;/h2&gt;" /;
+        
+        ** Start update list **;
+        
+        put "&lt;table border=""0"" width=""100%"" cellspacing=""0"" cellpadding=""4""&gt;" /;
+        
+        put "&lt;tr&gt;";
+
+        put "&lt;th align=""left"" valign=""bottom""&gt;Library/File&lt;/th&gt;";
+        put "&lt;th align=""left"" valign=""bottom""&gt;Date/Time&lt;/th&gt;";
+        put "&lt;th align=""left"" valign=""bottom""&gt;Creator&lt;/th&gt;";
+        put "&lt;th align=""left"" valign=""bottom""&gt;Revisions&lt;/th&gt;";
+        
+        put "&lt;/tr&gt;" /;
+        
+        altrow = 0;
+      
+      end;
+      
+      ** List of file updates **;
+
+      dt = datepart( FileUpdated );
+      tm = timepart( FileUpdated );
+      
+      ** Add month header, if new month **;
+      
+      *format prev_dt dt mmddyy10.;
+      
+      *put _n_= prev_dt= dt= ;
+      
+      if intck( 'month', prev_dt, dt ) &lt;= -1 then do;
+      
+        put "&lt;tr&gt;";
+        
+        link = compbl( put( dt, monname12. ) || " " || put( dt, year4. ) );
+
+        put "&lt;th align=""left"" valign=""bottom"" colspan=""4""&gt;" link "&lt;/th&gt;";
+        
+        put "&lt;/tr&gt;" /;
+        
+        altrow = 0;
+        
+      end;
+        
+      if altrow and "&amp;html_altbgcol" ~= "" then
+        put "&lt;tr bgcolor=""&amp;html_altbgcol""&gt;";
+      else
+        put "&lt;tr&gt;";
+        
+      ** Link to library/file **;
+      
+      link = "&amp;html_pre._" || trim( lowcase( library ) ) || 
+             "_" || trim( lowcase( FileName ) ) || ".&amp;html_suf";
+
+      put '&lt;td valign="top"&gt;&lt;a href="' link '"&gt;' cname "&lt;/a&gt;&lt;/td&gt;";
+      
+      ** Date/time stamp for revision **;
+      
+      link = put( dt, mmddyys8. ) || ' ' || put( tm, timeampm8. );
+      link = tranwrd( trim( left( compbl( link ) ) ), ' ', '&amp;nbsp;' );
+      
+      put "&lt;td valign=""top""&gt;" link "&lt;/td&gt;";
+      
+      ** File creator **;
+
+      %if &amp;creator_fmt ~= %then %do;
+        link = tranwrd( put( lowcase( FileCreator ), &amp;creator_fmt ), ' ', '&amp;nbsp;' );
+      %end;
+      %else %do;
+        link = FileCreator;
+      %end;
+
+      put "&lt;td valign=""top""&gt;" link "&lt;/td&gt;";
+      
+      ** Revision description **;
+      put "&lt;td valign=""top""&gt;" FileRevisions "&lt;/td&gt;";
+      
+      altrow = mod( altrow + 1, 2 );
+
+      ** Page footer **;
+      
+      if eof then do;
+
+        put "&lt;/table&gt;" /;
+
+        put "&lt;p&gt;&lt;small&gt;&lt;i&gt;Web page updated: " @;
+
+        put "&amp;cur_dt," '&amp;nbsp;' "&amp;cur_tm&lt;/i&gt;&lt;/small&gt;&lt;/p&gt;" /;
+        
+        %if %length( &amp;html_pg_header ) ne 0 %then %do;
+          put "&amp;html_pg_footer" /;
+        %end;
+      
+        put "&lt;/body&gt;";
+        put "&lt;/html&gt;";
+
+      end;
+      
+      prev_dt = datepart( FileUpdated );
+      
+    run;  
+    
+    
+    %if %mparam_is_yes( &amp;rss ) %then %do;
+    
+      /** Macro rss_std_dt - Start Definition **/
+
+      %macro rss_std_dt( dt, tm, tz );
+
+        put( &amp;dt, weekdatx17. ) || ' ' || put( &amp;tm, time8. ) || " %upcase(&amp;tz)"
+
+      %mend rss_std_dt;
+
+      /** End Macro Definition **/
+  
+      ** RSS update page **;
+
+      filename updt_xml "&amp;html_folder.&amp;html_pre._updates.xml";
+      
+      data _null_;
+      
+        length link cname $ 255;
+      
+        set &amp;meta_pre._updates end=eof; 
+          by descending FileUpdated;
+            
+        file updt_xml;
+        
+        library = %capitalize( library );
+        filename = %capitalize( filename );
+        
+        cname = trim( library ) || "." || trim( filename );
+          
+        dt = datepart( FileUpdated );
+        tm = timepart( FileUpdated );
+        
+        if _n_ = 1 then do;
+        
+          ** Page header **;
+          
+          put "&lt;?xml version=""1.0""?&gt;";
+          put "&lt;rss version=""2.0"" xmlns:atom=""http://www.w3.org/2005/Atom""&gt;";
+          put "&lt;channel&gt;";
+          put "  &lt;title&gt;&amp;html_title Recent updates&lt;/title&gt;";
+          
+          ** Page title &amp; nav bar **;
+          
+          put "  &lt;link&gt;&amp;rss_url/&amp;html_pre._libraries.&amp;html_suf&lt;/link&gt;";
+
+          put "  &lt;description&gt;Recent file updates (previous &amp;update_months months)&lt;/description&gt;";
+          put "  &lt;language&gt;en-us&lt;/language&gt;";
+          
+          link = %rss_std_dt( &amp;cur_dt_raw, &amp;cur_tm_raw, &amp;rss_timezone );
+          
+          put "  &lt;pubDate&gt;" link "&lt;/pubDate&gt;";
+          
+          link = %rss_std_dt( dt, tm, &amp;rss_timezone );
+
+          put "  &lt;lastBuildDate&gt;" link "&lt;/lastBuildDate&gt;";
+                    
+          put "  &lt;docs&gt;http://www.rssboard.org/rss-specification&lt;/docs&gt;";
+          put "  &lt;generator&gt;SAS macro Create_metadata_html()&lt;/generator&gt;";
+          
+          put "  &lt;atom:link href=""&amp;rss_url/&amp;html_pre._updates.xml"" rel=""self"" type=""application/rss+xml"" /&gt;";
+          
+        end;
+        
+        ** Create RSS item **;
+
+        put "      &lt;item&gt;";
+        put "         &lt;title&gt;" cname "&lt;/title&gt;";
+        
+        ** Link to library/file **;
+        
+        link = "&amp;rss_url/&amp;html_pre._" || trim( lowcase( library ) ) || 
+               "_" || trim( lowcase( FileName ) ) || ".&amp;html_suf";
+
+        put "         &lt;link&gt;" link "&lt;/link&gt;";
+        
+        ** Revision description **;
+        put "         &lt;description&gt;" FileRevisions "&lt;/description&gt;";
+        
+        ** Date/time stamp for revision **;
+        
+        link = %rss_std_dt( dt, tm, &amp;rss_timezone );
+        
+        put "         &lt;pubDate&gt;" link "&lt;/pubDate&gt;";
+        
+        put "      &lt;/item&gt;";
+        
+        ** Page footer **;
+        
+        if eof then do;
+
+          put "   &lt;/channel&gt;";
+          put "&lt;/rss&gt;";
+
+        end;
+        
+      run;  
+      
+    %end;
+  
+  %end;
+  %else %do;
+  
+    %Note_mput( macro=Create_metadata_html, msg=Update page not created because update_months= parameter not &gt; 0. )
+    
+  %end;
+    
+  %exit:
+  
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+  %** Restore system options **;
+  
+  %Pop_option( obs )
+
+  %Note_mput( macro=Create_metadata_html, msg=Macro exiting. )
+
+%mend Create_metadata_html;
+
+
+      </pre>
+   </body>
+</html>

@@ -1,0 +1,77 @@
+<!doctype html public "-//w3c//dtd html 4.0 final//en">
+<html>
+   <head>
+      <title>K:\Metro\PTatian\UISUG\Uiautos/Warn_mput.sas</title>
+   </head>
+   <body>
+      <pre>
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Warn_mput
+
+ Description: Write a macro-generated warning message to the SAS LOG
+ using %PUT.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
+
+%macro Warn_mput( 
+  Macro=,    /* Macro name */
+  Msg=       /* Message */
+  );
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Warn_mput( macro=MyMacro, Msg=Invalid parameter. )
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   11/07/04 - If Macro= parameter blank, does not include [macroname] in
+              message.  
+   09/06/05 - Reformatted so that message will be displayed in color
+              in SAS Enhanced Editor.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local SYL1 SYL2;
+    
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+
+  %let SYL1 = WARN;
+  
+  %if %length( &amp;macro ) = 0 %then %do;
+    %let SYL2 = ING:;
+  %end;
+  %else %do;
+    %let SYL2 = ING: [&amp;Macro];
+  %end;
+  
+  %put &amp;SYL1&amp;SYL2 &amp;Msg;
+
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+%mend Warn_mput;
+
+
+/************************ UNCOMMENT TO TEST ***************************
+
+%Warn_mput( macro=MyMacro, Msg=Test warning message. )
+
+/**********************************************************************/
+      </pre>
+   </body>
+</html>

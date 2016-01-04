@@ -1,0 +1,201 @@
+<!doctype html public "-//w3c//dtd html 4.0 final//en">
+<html>
+   <head>
+      <title>K:\Metro\PTatian\UISUG\Uiautos/MacroSearch.sas</title>
+   </head>
+   <body>
+      <pre>
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: MacroSearch
+
+ Description: Autocall macro to manage multiple SAS macro libraries.
+ Adapted from FmtSearch by Pete Lund.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
+
+%macro MacroSearch(
+  Action=M,     /* Action:
+                    B = Add to beginning of search list
+                    M = Add to middle (def.), i.e., after existing 
+                        libraries but before the libraries in &amp;Def
+                    E = Add to end
+                    D = Delete from search list
+                    X = Reset search list to &amp;Def
+                    L = Display current search list (no changes)
+                */
+  A=,           /* Alternate name for Action= */
+  Cat=,         /* Macro library filename */
+  C=,           /* Alternate name for Cat= */
+  Status=Y,     /* Display status after changes (def. Y) */
+  Def=SASAUTOS  /* Default libraries, only used with Action=M or X 
+                   (def. SASAUTOS) */
+  );
+  
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %MacroSearch( cat=Test, action=E )
+       adds Test to end of autocall macro library search
+
+    macro variables/parameters
+      Cat (C):    name of the macro library filename
+      Action (A): What do you want to do with the library filename:
+         B = put it at the beginning of the format search list,
+             even before default libraries
+         E = put it at the end of the library search list
+         D = remove it from the library search list
+         M = put it in the "middle" of the library search list.  It
+             will go after default libraries and before
+             any user-defined libraries in the search list.
+         L = simply lists the current macro library search list
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   11/02/13 PAT Used compbl() on _NEWFMS before checking for pos of DEF.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local _FMS i pos _ThisCat _Index1 _Index2 _ByVal NumCats;
+  %local _NewFMS;
+    
+  %if &amp;C ne %str() %then %let Cat = &amp;C;
+  %if &amp;A ne %str() %then %let Action = &amp;A;
+  %let Action = %upcase(&amp;Action);
+  %if &amp;Def ne %str() %then %let Def = %upcase( %sysfunc(compbl(&amp;Def)) );
+
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+  %if %index(BMEDXLZ,&amp;Action) eq 0 or
+      %length(&amp;Action) ne 1 %then
+    %do;
+      %put ;
+      %put %str(=====================================================================);
+      %err_mput( macro=MacroSearch, msg=No valid action requested. Cat=&amp;Cat Action=&amp;Action )
+      %put %str(=====================================================================);
+      %put ;
+      %goto Finish;
+    %end;
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+  
+  %if &amp;Cat eq %str() and &amp;Action ne L and &amp;Action ne X and &amp;Action ne Z %then
+    %do;
+      %put Here%str(%')s a list:;
+      %goto Finish;
+    %end;
+
+  %if &amp;Action eq X %then 
+    %do;
+      options sasautos=(&amp;Def);
+      %let Cat = %str();
+    %end;
+
+  %if &amp;Cat ne %str() %then %let Cat = %upcase( %sysfunc(compbl(&amp;Cat)) );
+
+  %let NumCats = %eval(%length(&amp;Cat) - %length(%sysfunc(compress(&amp;Cat,%str( )))) +1);
+  %if &amp;Action eq Z %then %let NumCats = 1;
+
+  %if &amp;NumCats ge 1 %then
+    %do;
+      %if &amp;Action eq M or &amp;Action eq B %then
+        %do;
+          %let _Index1 = &amp;NumCats;
+          %let _Index2 = 1;
+          %let _ByVal  = -1;
+        %end;
+      %else
+        %do;
+          %let _Index1 = 1;
+          %let _Index2 = &amp;NumCats;
+          %let _ByVal  = 1;
+        %end;
+      %do i = &amp;_Index1 %to &amp;_Index2 %by &amp;_ByVal;
+        %let _ThisCat = %scan(&amp;Cat,&amp;i,%str( ));
+
+        %let _FMS   = 
+           %upcase(%sysfunc(compress(%sysfunc(getoption(sasautos)),%str(%(%)))));
+
+        %if &amp;Action eq D or &amp;Action eq M or &amp;Action eq B or &amp;Action eq E  %then
+          %do;
+            %let _NewFMS = %sysfunc(compbl(%sysfunc(tranwrd(%str( &amp;_FMS ),%str( &amp;_ThisCat ),%str()))));
+            %if &amp;Action eq D %then %str(options sasautos=(&amp;_NewFMS););
+          %end;
+
+        %if &amp;Action eq M %then
+          %do;
+            %let pos = %index( &amp;_NewFMS, &amp;Def );
+            %if &amp;pos = 0 %then 
+              %do;
+                options sasautos=(&amp;_NewFMS &amp;_ThisCat);
+              %end;
+            %else %if &amp;pos = 1 %then
+              %do;
+                options sasautos=(&amp;_ThisCat &amp;_NewFMS);
+              %end;
+            %else
+              %do;
+                options sasautos=(%substr(&amp;_NewFMS,1,&amp;pos-1) &amp;_ThisCat %substr(&amp;_NewFMS,&amp;pos));
+              %end;
+          %end;
+
+        %if &amp;Action eq B %then
+          %do;
+            options sasautos=(&amp;_ThisCat &amp;_NewFMS);
+          %end;
+
+        %if &amp;Action eq E %then
+          %do;
+            options sasautos=(&amp;_NewFMS &amp;_ThisCat);
+          %end;
+      %end;
+    %end;
+
+  %if %mparam_is_yes( &amp;Status ) %then
+    %do;
+      %put; 
+      %put %str(=====================================================================);
+      %let _FMS = %upcase(%sysfunc(compress(%sysfunc(getoption(sasautos)),%str(%(%)))));
+      %put Current Sasautos Option value:;
+      %put ;
+      %put %str(     )&amp;_FMS;
+      %put ;
+      %put %str(=====================================================================);
+      %put ;
+    %end;
+
+  %Finish:
+
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+%mend MacroSearch;
+
+
+/************************ UNCOMMENT TO TEST ***************************
+
+filename Test 'D:\';
+
+%MacroSearch( action=L )
+
+%MacroSearch( cat=Test, action=0 )
+
+%MacroSearch( cat=Test, action=E )
+
+%put _global_;
+
+/**********************************************************************/
+
+      </pre>
+   </body>
+</html>

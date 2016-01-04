@@ -1,0 +1,75 @@
+<!doctype html public "-//w3c//dtd html 4.0 final//en">
+<html>
+   <head>
+      <title>K:\Metro\PTatian\UISUG\Uiautos/Fdate.sas</title>
+   </head>
+   <body>
+      <pre>
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Fdate
+
+ Description: Autocall macro to put a formatted version of 
+ a date value into a macro variable.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
+
+%macro fdate(
+  fmt=mmddyy10.,  /* SAS date format to use for formatting date */
+  mvar=fdate,     /* Name of macro variable to store formatted date */
+  date="&amp;sysdate9"d,   /* Date to reformat (default is system date) */
+  quiet=Y              /* Suppress message in log (Y/N) */
+  );
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %fdate(  )
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   03-17-06  Added DATE= and QUIET= parameters.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %global &amp;mvar;
+    
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+   
+   data _null_;
+      call symput("&amp;mvar",left(put(&amp;date,&amp;fmt)));
+   run;
+   
+   %if %mparam_is_no( &amp;quiet ) %then %do;
+     %note_mput( macro=FDATE, msg=Macro variable %upcase(&amp;mvar) set to &amp;&amp;&amp;mvar. )
+   %end;
+
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+%mend fdate;
+
+
+/************************ UNCOMMENT TO TEST ***************************
+
+%fdate( quiet=n )
+
+%fdate( mvar=month, fmt=monname9., quiet=n )
+
+/**********************************************************************/
+      </pre>
+   </body>
+</html>

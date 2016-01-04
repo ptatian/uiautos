@@ -1,0 +1,124 @@
+<!doctype html public "-//w3c//dtd html 4.0 final//en">
+<html>
+   <head>
+      <title>K:\Metro\PTatian\UISUG\Uiautos/Moving_avg.sas</title>
+   </head>
+   <body>
+      <pre>
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Moving_avg
+
+ Description: Calculate a moving average for variables of the form xxx_nnn
+ and assign to specified variable. Label variable.
+ 
+ Use: Within data step
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
+
+%macro Moving_avg( 
+  var,            /** Variable name prefix **/ 
+  from,           /** Starting time period **/
+  to,             /** Ending time period **/
+  years,          /** Number of obs to combine for an average **/ 
+  label=,         /** Base label for variable **/
+  time_unit=year  /** Label for observation time period **/
+  );
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Moving_avg( val, 1999, 2002, 3, label=Value )
+       creates two variables (val_3yr_2001, val_3yr_2002) with 3-year 
+       moving averages of val_1999 through val_2002
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local i j;
+    
+  %let time_unit = %lowcase( &amp;time_unit );
+
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+  
+  %if &amp;years =  %then %do;
+    %err_mput( macro=Moving_avg, msg=Must provide a value for number of obs to combine (4th parameter). )
+    %goto exit;
+  %end;
+
+  %if %sysfunc( anyalpha( &amp;years ) ) %then %do;
+    %err_mput( macro=Moving_avg, msg=Must provide a numeric value for number of obs to combine (4th parameter): &amp;years.. )
+    %goto exit;
+  %end;
+
+  %let years = %sysfunc( int( &amp;years ) );
+
+  %if not( &amp;years &gt;= 1 ) %then %do;
+    %err_mput( macro=Moving_avg, msg=Number of obs to combine must be 1 or higher: &amp;years.. )
+    %goto exit;
+  %end;
+  
+  %if &amp;years &gt; %eval( ( &amp;to - &amp;from ) + 1 ) %then %do;
+    %err_mput( macro=Moving_avg, msg=Number of obs to combine must be less than or equal to number of variables: &amp;years &gt; %eval( ( &amp;to - &amp;from ) + 1 ). )
+    %goto exit;
+  %end;
+    
+  
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+  
+  %do i = &amp;from + ( &amp;years - 1 ) %to &amp;to;
+    
+    %let j = %eval( &amp;i - ( &amp;years - 1 ) );
+    
+    if n( of &amp;var._&amp;j-&amp;var._&amp;i ) = &amp;years then 
+      &amp;var._&amp;years.yr_&amp;i = mean( of &amp;var._&amp;j-&amp;var._&amp;i );
+    else 
+      &amp;var._&amp;years.yr_&amp;i = .;
+   
+    %if %length( &amp;label ) &gt; 0 %then %do;
+      label &amp;var._&amp;years.yr_&amp;i = "&amp;label, &amp;years-&amp;time_unit avg., &amp;i";
+    %end;
+    
+  %end;
+  
+  %exit:
+
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+%mend Moving_avg;
+
+
+/************************ UNCOMMENT TO TEST ***************************
+
+**options mprint symbolgen mlogic;
+options mprint;
+
+
+data _null_;
+
+  val_1999 = 50;
+  val_2000 = 40;
+  val_2001 = 30;
+  val_2002 = 20;
+  
+  %Moving_avg( val, 1999, 2002, 3, label=Value )
+  
+  put (val_:) (=) /;
+
+run;
+
+/**********************************************************************/
+
+      </pre>
+   </body>
+</html>

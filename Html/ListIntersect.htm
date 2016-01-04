@@ -1,0 +1,105 @@
+<!doctype html public "-//w3c//dtd html 4.0 final//en">
+<html>
+   <head>
+      <title>K:\Metro\PTatian\UISUG\Uiautos/ListIntersect.sas</title>
+   </head>
+   <body>
+      <pre>
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: ListIntersect
+
+ Description: Autocall macro returns the intersection of two lists.
+ 
+ Use: Function
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
+
+%macro ListIntersect(
+  list1,           /* List of items #1 */
+  list2,           /* List of items #2 */
+  delim=%str( )    /* Delimiter for list (def. blank char) */
+  );
+  
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %ListIntersect( A B C D, C D E F )
+       returns C D, which is intersection of A B C D and C D E F
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   02/23/11  PAT  Added declaration for local macro vars.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local ListIntersect scanlist1 scanlist2 i item;
+  
+   
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+
+  %let list1 = %ListNoDup( &amp;list1, delim=&amp;delim );
+  %let list2 = %ListNoDup( &amp;list2, delim=&amp;delim );
+
+  %let ListIntersect = ;
+  %let scanlist1 = {{bol}}&amp;delim&amp;list1&amp;delim{{eol}};
+  %let scanlist2 = {{bol}}&amp;delim&amp;list2&amp;delim{{eol}};
+  
+  %let i = 2;
+  %let item = %scan( &amp;scanlist1, &amp;i, &amp;delim );
+
+  %do %while ( %length( &amp;item ) &gt; 0 and &amp;item ~= {{eol}} );
+    %if %index( &amp;scanlist2, &amp;delim&amp;item&amp;delim ) &gt; 0 %then %do;
+      %if %length( &amp;ListIntersect ) = 0 %then
+        %let ListIntersect = &amp;item;
+      %else
+        %let ListIntersect = &amp;ListIntersect&amp;delim&amp;item;
+    %end;
+    %let i = %eval( &amp;i + 1 );
+    %let item = %scan( &amp;scanlist1, &amp;i, &amp;delim );
+  %end;
+
+  %let ListIntersect = %unquote( &amp;ListIntersect );
+  &amp;ListIntersect
+
+  %exit:
+
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+%mend ListIntersect;
+
+
+/************************ UNCOMMENT TO TEST ***************************
+
+options mprint nosymbolgen nomlogic;
+
+** Autocall macros **;
+
+filename uiautos "K:\Metro\PTatian\UISUG\Uiautos\";
+options sasautos=(uiautos sasautos);
+
+%let list1 = Z A B C X Y E Y Z F G X;
+%let list2 = A B C D W X Y Z;
+%let result = [%ListIntersect( &amp;list1, &amp;list2 )];
+%put _user_;
+
+%let list1 = A B C D E F G;
+%let list2 = W X Y Z;
+%let result = [%ListIntersect( &amp;list1, &amp;list2 )];
+%put _user_;
+
+/**********************************************************************/
+      </pre>
+   </body>
+</html>

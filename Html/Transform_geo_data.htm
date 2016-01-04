@@ -1,0 +1,568 @@
+<!doctype html public "-//w3c//dtd html 4.0 final//en">
+<html>
+   <head>
+      <title>K:\Metro\PTatian\UISUG\Uiautos/Transform_geo_data.sas</title>
+   </head>
+   <body>
+      <pre>
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Transform_geo_data
+
+ Description: Autocall macro to convert data from an original geographic 
+ level to new geography using a normalized weighting file. 
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
+
+%macro Transform_geo_data(
+    dat_ds_name = ,    /** Input data set library and name **/
+    dat_org_geo = ,    /** Original geo id in input data set **/
+    dat_new_geo = ,    /** Specify an alternate aggregation geo var from input data set when a weighting file is not being used (optional) **/
+    dat_count_vars = , /** Count vars in input data set **/
+    dat_prop_vars  = , /** Proportion vars in input data set **/
+    dat_id_vars = ,    /** ID variables from input data set to add to output data set observations (optional) **/
+    dat_count_moe_vars = ,  /** Margin of error vars for transformed count vars (optional) **/
+    calc_vars = ,      /** SAS statements to define calculated vars based on transformed data (optional) **/
+    calc_vars_labels = ,  /** Variable labels for vars defined in calc_vars= (optional) **/
+    wgt_ds_name = ,    /** Weighting file data set library and name **/
+    wgt_org_geo = ,    /** Original geo id in weighting file **/
+    wgt_new_geo = ,    /** New geo id in weighting file **/
+    wgt_new_geo_fmt = ,  /** Format for weighting file geo var, will be added to output data set (optional) **/
+    wgt_id_vars = ,    /** Additional geo IDs in weighting file (optional) **/
+    wgt_wgt_var = ,    /** Alias for wgt_count_var= **/
+    wgt_count_var = ,  /** Name of weight variable to use for counts **/
+    wgt_prop_var = ,   /** Name of weight variable to use for proportions **/
+    out_ds_name = ,    /** Output data set library and name **/
+    out_ds_label = ,   /** Label for output data set (optional) **/
+    show_warnings = 10,  /** Number of nonmatch warnings to show (optional, def. 10) **/
+    keep_nonmatch = N,   /** Keep nonmatching obs in output data (optional, Y/N, def. N) **/
+    print_diag = Y,    /** Print diagnostic table at end if input and output count sums do not match (optional, Y/N, def. Y) **/
+    max_diff = 0.00001,   /** Maximum difference allowed for diagnostic check of count variable sums (optional, def. 0.00001) **/
+    full_diag = N,     /** Print full diagnostics (optional, Y/N, def. N) **/
+    mprint = N         /** Sets printing of resolved macro code (optional, Y/N, def. N) **/
+  );
+  
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Transform_geo_data(
+         dat_ds_name = Test_dat,
+         dat_org_geo = geo_in,
+         dat_count_vars = count1 count2,
+         dat_prop_vars  = prop1, 
+         calc_vars = 
+           prop2 = 100 * ( count1 / count2 );
+           sum1 = count1 + count2; ,
+         calc_vars_labels = 
+           prop2 = "100 * ( count1 / count2 )"
+           sum1 = "count1 + count2" , 
+         wgt_ds_name = Test_wgt,
+         wgt_org_geo = geo_in,
+         wgt_new_geo = geo_out,
+         wgt_id_vars = alt_id,
+         wgt_count_var = wt,
+         wgt_prop_var = wt,
+         out_ds_name = Test_out,
+         out_ds_label = Transform_geo_data macro test output data set
+       )
+
+     The following named parameters must be supplied:
+         dat_ds_name    = Input data set library and name
+         dat_org_geo    = Original geo id in input data set
+         wgt_ds_name    = Weighting file data set library and name
+         wgt_org_geo    = Original geo id in weighting file
+         wgt_new_geo    = New geo id in weighting file
+         out_ds_name    = Output data set library and name
+    
+     At least one of the two variable lists (or both) must be supplied:
+         dat_count_vars = Count vars in input data set
+         dat_prop_vars  = Proportion vars in input data set
+    
+     One or more of the following weighting variables must be supplied based on the variable lists specified:
+         wgt_count_var  = Name of weight variable to use for counts
+         wgt_wgt_var    = Alias for wgt_count_var=
+         wgt_prop_var   = Name of weight variable to use for proportions
+
+     The following parameters are optional:
+         dat_new_geo    = Specify an alternate aggregation geo var from input data set when a weighting file is not being used
+         dat_id_vars    = ID variables from input data set to add to output data set observations
+         dat_count_moe_vars = Margin of error vars for transformed count vars
+         out_ds_label   = Label for output data set
+         wgt_new_geo_fmt = Format for weighting file geo var, will be added to output data set
+         wgt_id_vars    = Additional geo IDs in weighting file
+         calc_vars      = SAS statements to define calculated vars based on transformed data
+         calc_vars_labels = Variable labels for vars defined in calc_vars=
+         show_warnings  = Number of nonmatch warnings to show (def. 10)
+         keep_nonmatch  = Keep nonmatching obs in output data (Y/N, def. N)
+         print_diag     = Print diagnostic table at end if input and output count sums do not match (Y/N, def. Y)
+         full_diag      = Print full diagnostics (Y/N, def. N)
+         max_diff       = Maximum difference allowed for diagnostic check of count variable sums (def. 0.00001)
+         mprint         = Sets printing of resolved macro code (Y/N, def. N)
+    
+     NOTES:
+       The weighting file is assumed to be normalized, that is, the values
+       of the count weight variable (wgt_count_var=) must sum to 1 for each value of 
+       the original geography variable (wgt_org_geo=).
+       Values of the proportion weight variable (wgt_prop_var=) must average to 1 for each
+       value of the original geography variable (wgt_org_geo=).
+    
+       Neither the weight file nor the input file must be sorted.
+    
+       The keep_nonmatch= parameter controls how obs. in the input data set
+       that do not have a matching geo ID in the weighting data set are 
+       handled.  If keep_nonmatch=Y, the nonmatching obs are kept in the 
+       output file and are given the same geo ID value as in the input file.
+       If keep_nonmatch=N, the nonmatching obs are dropped.  
+    
+       For each nonmatch, a warning message will be printed in the SAS log 
+       up to the number specified in show_warnings=. To suppress all nonmatch
+       warnings, set show_warnings=0.
+  
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   09/09/02  Peter A. Tatian
+   10/03/02  Macro now issues a nonmatch warning if the matching record 
+             in the weight file has a missing value for the weight variable.
+             PAT
+   08/11/03  Added calc_vars= and calc_vars_labels= options.  PAT
+   12/30/03  Corrected warning message using wgt_org_geo.  PAT
+   01/14/05  Suppress variable labels in diagnostic output.  PAT
+   08/21/06  Added WGT_NEW_GEO_FMT= option.  
+             Modified diagnostic output to use Proc Compare.  PAT
+   08/27/06  Added MAX_DIFF= option. Changed Proc Compare method to relative.
+             Updated macro log messages.
+   08/28/06  Changed Compare method to Absolute. Added MPRINT= option.
+   12/18/07  Added dat_id_vars= parameter.
+   06/27/11  Added dat_count_moe_vars= parameter to support calculation of
+             aggregated margins of error.
+             Omitting weight file now permitted. (Useful for margin of error
+             aggregations without any weighting file.) Optional parameter 
+             DAT_NEW_GEO= can be used to specify an alternate aggregation
+             geo from the input data set when a weighting file is not being
+             used. PAT
+   07/09/11  Changed weighting for MOE calculation to simple weight 
+             (previously was squared weight). 
+   07/19/11  Corrected problem with "&amp;out_ds_label] ~= " test. Replaced with
+             "%length( &amp;out_ds_label ) &gt; 0".  PAT
+   07/14/12  Added wgt_count_var= and wgt_prop_var= parameters to specify
+             separate weights for counts and proportions. wgt_wgt_var= 
+             is an alias for wgt_count_var=.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local macro version i v;
+    
+  %let macro = Transform_geo_data;
+  %let version = 7/14/12;
+  
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+  
+  %note_mput( macro=&amp;macro, msg=Starting macro (version &amp;version). )
+  
+  %let mprint = %upcase( &amp;mprint );
+  
+  %push_option( mprint )
+
+  %if %mparam_is_yes( &amp;mprint ) %then %do;
+    options mprint;
+  %end;
+  %else %do;
+    options nomprint;
+  %end;
+  
+  %if &amp;wgt_count_var = %then %let wgt_count_var = &amp;wgt_wgt_var;
+  
+  %** Check parameters **;
+  
+  %if &amp;wgt_ds_name = %then %do;
+  
+    %note_mput( macro=&amp;macro, msg=No weighting file specified (WGT_DS_NAME=). )
+  
+    %let wgt_new_geo = &amp;dat_new_geo;
+  
+  %end;
+  %else %do;
+  
+    %if &amp;dat_new_geo ~= %then %do;
+      %warn_mput( macro=&amp;macro, msg=Weighting file specified so DAT_NEW_GEO=&amp;dat_new_geo will be ignored. )
+      %let dat_new_geo = ;
+    %end;
+    
+    %if ( ( &amp;dat_count_vars ~= ) or ( &amp;dat_count_moe_vars ~= ) ) and &amp;wgt_count_var = %then %do;
+      %err_mput( macro=&amp;macro, msg=No weight variable specified for count variables (WGT_COUNT_VAR=). )
+      %goto exit;
+    %end;
+  
+    %if &amp;dat_prop_vars ~= and &amp;wgt_prop_var = %then %do;
+      %err_mput( macro=&amp;macro, msg=No weight variable specified for proportion variables (WGT_PROP_VAR=). )
+      %goto exit;
+    %end;
+ 
+  %end;
+  
+  %put calc_vars= &amp;calc_vars;
+  
+  ** Sort data for merging **;
+  
+  %if &amp;wgt_ds_name ~= %then %do;
+    proc sort 
+        data=&amp;wgt_ds_name (keep=&amp;wgt_org_geo &amp;wgt_new_geo &amp;wgt_count_var &amp;wgt_prop_var &amp;wgt_id_vars )
+        out=_tgd_wgt_file;
+      *where not missing( sum( of &amp;wgt_count_var &amp;wgt_prop_var ) );
+      %if &amp;wgt_count_var ~= %then %do;
+        %if &amp;wgt_prop_var ~= %then %do;
+          where &amp;wgt_count_var &gt;= 0 or &amp;wgt_prop_var &gt;= 0;
+        %end;
+        %else %do;
+          where &amp;wgt_count_var &gt;= 0;
+        %end;
+      %end;
+      %else %if &amp;wgt_prop_var ~= %then %do;
+        where &amp;wgt_prop_var &gt;= 0;
+      %end;
+      by &amp;wgt_org_geo;
+    run;
+  %end;
+  
+  proc sort 
+      data=&amp;dat_ds_name (keep=&amp;dat_org_geo &amp;dat_new_geo &amp;dat_count_vars &amp;dat_count_moe_vars 
+                              &amp;dat_prop_vars &amp;dat_id_vars)
+      out=_tgd_dat_file;
+    by &amp;dat_org_geo;
+  run;
+    
+  data _tgd_wgt_merg;
+
+    ** Initialize warning count **;
+    
+    retain _warn_ct (&amp;show_warnings);
+    
+    %if &amp;wgt_ds_name ~= %then %do;
+    
+      ** Transform using weighting file **;
+
+      merge
+        _tgd_wgt_file (in=in_wf)
+        _tgd_dat_file (in=in_df rename=(&amp;dat_org_geo=&amp;wgt_org_geo));
+      by &amp;wgt_org_geo;
+      
+      if not( in_wf ) then do;
+      
+        if _warn_ct &gt; 0 then do;
+          %warn_put( macro=&amp;macro, msg="Matching obs. not found in weight file: &amp;dat_ds_name/" 
+            "&amp;dat_org_geo=" &amp;wgt_org_geo )
+          %if %mparam_is_yes( &amp;keep_nonmatch ) %then %do;
+            %note_put( macro=&amp;macro, msg="Nonmatching obs. will be kept (KEEP_NONMATCH=Y)." )
+          %end;
+          %else %do;
+            %note_put( macro=&amp;macro, msg="Nonmatching obs will be dropped (KEEP_NONMATCH=N)." )
+          %end;
+          _warn_ct = _warn_ct - 1;
+          if _warn_ct = 0 then do;
+            %note_put( macro=&amp;macro, msg="No further nonmatch warnings will be printed because maximum reached (SHOW_WARNINGS=&amp;show_warnings)." )
+          end;
+            
+        end;
+        
+        %if %mparam_is_yes( &amp;keep_nonmatch ) %then %do;
+          %if &amp;wgt_count_var ~= %then %do;
+            &amp;wgt_count_var = 1;
+          %end;
+          %if &amp;wgt_prop_var ~= %then %do;
+            &amp;wgt_prop_var = 1;
+          %end;
+          &amp;wgt_new_geo = &amp;wgt_org_geo;
+        %end;
+        %else %do;
+          delete;
+        %end;
+      
+      end;
+      
+      ** Only retain obs in data file **;
+
+      if in_df;
+
+      drop _warn_ct;
+
+    %end;
+    %else %do;
+    
+      ** Transform without weighting file **;
+
+      %let wgt_wgt_var = _tgd_weight_dum;
+    
+      set _tgd_dat_file;
+      
+      %if &amp;wgt_count_var ~= %then %do;
+        &amp;wgt_count_var = 1;
+      %end;
+      %if &amp;wgt_prop_var ~= %then %do;
+        &amp;wgt_prop_var = 1;
+      %end;
+
+    %end;
+      
+  run;
+
+  %if %mparam_is_yes( &amp;full_diag ) %then %do;
+    proc print data=_last_;
+      title3 "_tgd_Wgt_merg";
+    run;
+    title3;
+  %end;
+  
+  %if &amp;wgt_new_geo ~= %then %do;
+    proc sort data=_tgd_wgt_merg;
+      by &amp;wgt_new_geo;
+    run;
+  %end;
+    
+  proc summary data=_tgd_wgt_merg;
+    %if ( &amp;dat_count_vars ~= ) or ( &amp;dat_count_moe_vars ~= ) %then %do;
+      var &amp;dat_count_vars &amp;dat_count_moe_vars /weight=&amp;wgt_count_var;
+    %end;
+    %if &amp;dat_prop_vars ~= %then %do;
+      var &amp;dat_prop_vars /weight=&amp;wgt_prop_var;
+    %end;
+    %if &amp;dat_id_vars ~=  or &amp;wgt_id_vars ~=  %then %do;
+      id &amp;dat_id_vars &amp;wgt_id_vars;
+    %end;
+    %if &amp;wgt_new_geo ~= %then %do;
+      by &amp;wgt_new_geo;
+    %end;
+    output 
+      %if %length( &amp;calc_vars ) &gt; 0 or %length( &amp;dat_count_moe_vars ) &gt; 0 %then %do;
+        out=_tgd_wgt_merg_sum (drop=_type_ _freq_)
+      %end;
+      %else %do;
+        out=&amp;out_ds_name 
+          (drop=_type_ _freq_
+            %if %length( &amp;out_ds_label ) &gt; 0 %then %do;
+              label="&amp;out_ds_label"
+            %end;
+          )
+      %end;
+      %if &amp;dat_count_vars ~=  %then %do;
+        sum( &amp;dat_count_vars )=
+      %end;
+      %if &amp;dat_prop_vars ~=  %then %do;
+        mean( &amp;dat_prop_vars )=
+      %end;
+      %if &amp;dat_count_moe_vars ~= %then %do;
+        uss( &amp;dat_count_moe_vars )=
+      %end;
+    ;  
+    %if &amp;wgt_new_geo_fmt ~= %then %do;
+      format &amp;wgt_new_geo &amp;wgt_new_geo_fmt;
+    %end;
+    
+  run;
+
+  %if %length( &amp;calc_vars ) &gt; 0 or %length( &amp;dat_count_moe_vars ) &gt; 0 %then %do;
+  
+    data &amp;out_ds_name (
+          %if %length( &amp;out_ds_label ) &gt; 0 %then %do;
+            label="&amp;out_ds_label"
+          %end;
+         );
+
+    set _tgd_wgt_merg_sum;
+    
+    ** Calculated variables **;
+
+    &amp;calc_vars ;
+
+    %if %length( &amp;calc_vars_labels ) &gt; 0 %then %do;
+      label &amp;calc_vars_labels;
+    %end;
+    
+    %if &amp;dat_count_moe_vars ~= %then %do;
+
+      ** MOE variables **;
+      
+      %let i = 1;
+      %let v = %scan( &amp;dat_count_moe_vars, &amp;i, %str( ) );
+
+      %do %until ( &amp;v = );
+
+        &amp;v = sqrt( &amp;v );
+
+        %let i = %eval( &amp;i + 1 );
+        %let v = %scan( &amp;dat_count_moe_vars, &amp;i, %str( ) );
+
+      %end;
+    
+    %end;
+    
+    run;
+
+  %end;
+
+  %if %mparam_is_yes( &amp;full_diag ) %then %do;
+    proc print data=&amp;out_ds_name;
+      title3 "&amp;out_ds_name";
+    run;
+    title3;
+  %end;
+
+  %if %mparam_is_yes( &amp;print_diag ) and &amp;dat_count_vars ~=  %then %do;
+    
+    %note_mput( macro=&amp;macro, msg=Running diagnostic on count vars. )
+    
+    /** Alternate diagnostic **/
+    
+    proc summary data=&amp;dat_ds_name;
+      var &amp;dat_count_vars;
+      output out=_tgd_input sum=;
+      
+    proc summary data=&amp;out_ds_name;
+      var &amp;dat_count_vars;
+      output out=_tgd_output sum=;
+      
+    proc compare base=_tgd_input compare=_tgd_output maxprint=(40,32000) nosummary
+        method=absolute criterion=&amp;max_diff;
+      var &amp;dat_count_vars;
+      title3 "*** Transform_geo_data():  Diagnostic";
+      title4 "*** Proc Compare should report that ""No unequal values were found,""";
+      title5 "*** unless keep_nonmatch=N and there were non-matching obs.";
+      title6 "*** BASE is input data set (&amp;dat_ds_name), COMPARE is output data set (&amp;out_ds_name).";
+    run;
+    
+    title3;
+    
+  %end;
+  %else %do;
+    %note_mput( macro=&amp;macro, msg=Diagnostic not run because PRINT_DIAG=N or DAT_COUNT_VARS= is empty. )
+  %end;
+  
+  %exit:
+  
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+  proc datasets library=work memtype=(data) nolist nowarn;
+    delete _tgd_:;
+  quit;
+
+  %pop_option( mprint )
+  
+  %note_mput( macro=&amp;macro, msg=Macro exiting. )
+
+%mend Transform_geo_data;
+
+
+/************************ UNCOMMENT TO TEST ***************************
+
+**options mprint symbolgen mlogic;
+options mprint;
+
+title 'Transform_geo_data:  DCNIS, Macro Library';
+
+** Autocall macros **;
+
+filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
+options sasautos=(uiautos sasautos);
+
+data Test_wgt;
+
+  length geo_in geo_out alt_id $ 8;
+
+  input geo_in geo_out alt_id wt;
+  
+  cards;
+  A  A1  X  0.40
+  A  A2  X  0.60
+  B  B1  X  1.00
+  C  B1  Y  1.00
+  D  D   Y  1.00
+  E  E1  Z  0.25
+  E  F1  Z  0.75
+  F  E1  Z  0.50
+  F  F1  Z  0.50
+  H  H   Z  1.00
+  ;
+  
+run;
+
+proc print data=Test_wgt;
+  title3 "Test_wgt";
+run;
+
+data Test_dat;
+
+  length geo_in $ 8;
+
+  input geo_in count1 count2 prop1 ;
+  
+  cards;
+  A 100 1000 20
+  B 100 1000 40
+  C 100 1000 50
+  D 100 1000 60
+  E 100 1000 80
+  F 100 1000 100
+  G 100 1000 10
+  ;
+  
+run;
+
+proc print data=Test_dat;
+  title3 "Test_dat";
+run;
+
+** Invoke macro to convert count variables count1 and count2 and
+** proportion variable prop1 in Test_dat from geographic level 
+** geo_in to geo_out.  Weighting file is Test_wgt.
+**;
+
+%Transform_geo_data(
+    dat_ds_name = Test_dat,
+    dat_org_geo = geo_in,
+    dat_count_vars = count1 count2,
+    dat_prop_vars  = prop1, 
+    calc_vars = 
+      prop2 = 100 * ( count1 / count2 );
+      sum1 = count1 + count2; ,
+    calc_vars_labels = 
+      prop2 = "100 * ( count1 / count2 )"
+      sum1 = "count1 + count2" , 
+    wgt_ds_name = Test_wgt,
+    wgt_org_geo = geo_in,
+    wgt_new_geo = geo_out,
+    wgt_id_vars = alt_id,
+    wgt_wgt_var = wt,
+    wgt_prop_var = wt,
+    out_ds_name = Test_out,
+    out_ds_label = Transform_geo_data macro test output data set,
+    show_warnings = 1,
+    keep_nonmatch = Y,
+    print_diag = Y,
+    full_diag = Y,
+    mprint = Y
+  )
+
+proc contents data=Test_out;
+run;
+
+** Check that macro temporary data sets have been deleted **;
+proc datasets library=work memtype=(data);
+quit;
+
+/**********************************************************************/
+      </pre>
+   </body>
+</html>

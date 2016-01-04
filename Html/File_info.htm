@@ -1,0 +1,110 @@
+<!doctype html public "-//w3c//dtd html 4.0 final//en">
+<html>
+   <head>
+      <title>K:\Metro\PTatian\UISUG\Uiautos/File_info.sas</title>
+   </head>
+   <body>
+      <pre>
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: File_info
+
+ Description: Autocall macro to print basic information for a
+ data set:  contents, first few obs., and descriptive statistics.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
+
+%macro File_info(
+  data=,           /* Data set */
+  contents=Y,      /* Print Proc Contents (N to suppress) */
+  printobs=10,     /* Number of obs. to print (0 to suppress) */
+  printchar=N,     /* Print char. vars. only when printing obs. */
+  printvars=,      /* List of variables to print (optional) */
+  freqvars=,       /* List of variables for frequency tables (optional) */
+  stats=n sum mean stddev min max  /* Proc Means statistics (blank to suppress) */
+  );
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %File_info( data=MyData )
+       prints contents, first 10 obs, and default statistics for
+       MyData data set.
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+   10/13/04  Added freqvars option to do frequency tables.
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+
+  title2 "File = &amp;data";
+
+  %if %mparam_is_yes( &amp;contents ) %then %do; 
+    proc contents data=&amp;data;
+    run;
+  %end;
+
+  %if &amp;printobs &gt; 0 %then %do; 
+    proc print data=&amp;data (obs=&amp;printobs);
+    %if %mparam_is_yes( &amp;printchar ) %then %do;
+      var _char_;
+      title3 "Printing first &amp;printobs obs. (char. vars. only)";
+    %end;
+    %else %if %length( &amp;printvars ) &gt; 0 %then %do;
+      var &amp;printvars;
+      title3 "Printing first &amp;printobs obs. (selected vars.)";
+    %end;
+    %else %do;
+      title3 "Printing first &amp;printobs obs.";
+    %end;
+    run;
+    title3;
+  %end;
+  
+  %if %length( &amp;stats ) %then %do;
+    options nolabel;
+    proc means data=&amp;data &amp;stats;
+    run;
+    options label;
+  %end;
+
+  %if %length( &amp;freqvars ) %then %do;
+    proc freq data=&amp;data;
+      tables &amp;freqvars / missing;
+    run;
+  %end;
+
+  %exit:
+
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+  title2;
+
+%mend File_info;
+
+
+/************************ UNCOMMENT TO TEST ***************************
+
+%File_info( data=Sashelp.Shoes, freqvars=region product )
+
+/**********************************************************************/
+      </pre>
+   </body>
+</html>

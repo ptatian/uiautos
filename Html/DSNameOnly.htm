@@ -1,0 +1,75 @@
+<!doctype html public "-//w3c//dtd html 4.0 final//en">
+<html>
+   <head>
+      <title>K:\Metro\PTatian\UISUG\Uiautos/DSNameOnly.sas</title>
+   </head>
+   <body>
+      <pre>
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: DSNameOnly
+
+ Description: Autocall macro that returns the data set name portion of a
+ libname.dataset specification.
+ 
+ Use: Function
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
+
+%macro DSNameOnly( LibDataSpec );
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %DSNameOnly( Libname.Dataset )
+       returns Dataset
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local dot Ret;
+    
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+
+  %let dot = %sysfunc( indexc( &amp;LibDataSpec, '.' ) );
+  
+  %let Ret = %sysfunc( substr( &amp;LibDataSpec, &amp;dot + 1 ) );
+  &amp;Ret
+
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+
+%mend DSNameOnly;
+
+
+/************************ UNCOMMENT TO TEST ***************************
+
+options mprint symbolgen mlogic;
+
+%let test1 = Libname.DataSet;
+%let test1_ds = %DSNameOnly( &amp;test1 );
+%put test1=&amp;test1 test1_ds=&amp;test1_ds;
+
+%let test2 = DataSet;
+%let test2_ds = %DSNameOnly( &amp;test2 );
+%put test2=&amp;test2 test2_ds=&amp;test2_ds;
+
+/**********************************************************************/
+
+      </pre>
+   </body>
+</html>

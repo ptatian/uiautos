@@ -1,0 +1,138 @@
+<!doctype html public "-//w3c//dtd html 4.0 final//en">
+<html>
+   <head>
+      <title>K:\Metro\PTatian\UISUG\Uiautos/Pop_option.sas</title>
+   </head>
+   <body>
+      <pre>
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Pop_option
+
+ Description: Pop specified SAS system option from top of stack and 
+ restore as current option value.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
+
+%macro Pop_option( 
+  option,    /** Name of option value to restore **/
+  quiet=N    /** QUIET=Y to suppress LOG messages **/
+  );
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Pop_option( obs )
+       restores the most recently saved obs= option value
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %global _&amp;option._stack;
+  %local new_stack i opt option_val;
+
+   
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+
+  %let option_val = %scan( &amp;&amp;&amp;_&amp;option._stack, 1 );
+  
+  %if &amp;option_val = %then %do;
+    %err_mput( macro=Pop_option, msg=No value of %upcase(&amp;option) was saved with the Push_option() macro. )
+    %goto exit_macro;
+  %end;
+  
+  %** Restore saved system option value **;
+  
+  options &amp;option_val;
+  
+  %if not %mparam_is_yes( &amp;quiet ) %then %do;
+    %note_mput( macro=Pop_option, msg=System option %upcase(&amp;option_val) restored. )
+  %end;
+  
+  %** Remove top option value from stack **;
+  
+  %let new_stack = ;
+  %let i = 2;
+  %let opt = %scan( &amp;&amp;&amp;_&amp;option._stack, &amp;i );
+  
+  %do %while ( &amp;opt ~= );
+  
+    %let new_stack = &amp;new_stack &amp;opt;
+    
+    %let i = %eval( &amp;i + 1 );
+    %let opt = %scan( &amp;&amp;&amp;_&amp;option._stack, &amp;i );
+  
+  %end;
+
+  %let _&amp;option._stack=&amp;new_stack;
+  
+  %* %put _&amp;option._stack=&amp;&amp;&amp;_&amp;option._stack;
+  
+  %exit_macro:
+  
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+%mend Pop_option;
+
+
+/************************ UNCOMMENT TO TEST ***************************
+
+
+filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
+
+options sasautos=(uiautos sasautos);
+
+*options mprint symbolgen mlogic;
+options nomprint;
+
+%Push_option( mprint )
+
+options mprint;
+
+%Push_option( obs )
+
+options obs=10;
+%Push_option( obs, quiet=y )
+
+options obs=0;
+%Push_option( obs )
+
+%put _user_;
+
+%Pop_option( obs )
+%put _user_;
+
+%Pop_option( obs )
+%put _user_;
+
+%Pop_option( obs )
+%put _user_;
+
+%Pop_option( obs )
+%put _user_;
+
+%Pop_option( mprint )
+%put _user_;
+
+%Pop_option( orientation )
+%put _user_;
+
+/**********************************************************************/
+      </pre>
+   </body>
+</html>

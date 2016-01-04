@@ -1,0 +1,125 @@
+<!doctype html public "-//w3c//dtd html 4.0 final//en">
+<html>
+   <head>
+      <title>K:\Metro\PTatian\UISUG\Uiautos/ListNoDup.sas</title>
+   </head>
+   <body>
+      <pre>
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: ListNoDup
+
+ Description: Autocall macro returns list with duplicate entries 
+ removed.
+ 
+ Use: Function
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
+
+%macro ListNoDup(
+  list,           /* List of items */
+  delim=%str( )   /* Delimiter for list (def. blank char) */
+  );
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %ListNoDup( A.B.C.D.E.B.F.A.C.G, delim=. )
+       returns unduplicated list A.B.C.D.E.F.G
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local ListNoDup scanlist item;
+    
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+  %if &amp;delim = { or &amp;delim = } %then %do;
+    %err_mput( macro=ListNoDup, msg=Curly braces { } cannot be used as list delimiters. )
+    %goto exit;
+  %end;
+
+  %if %index( &amp;list, {{bol}} ) &gt; 0 or %index( &amp;list, {{eol}} ) &gt; 0 %then %do;
+    %err_mput( macro=ListNoDup, msg=The text "{{bol}}" or "{{eol}}" must not appear in the list. )
+    %goto exit;
+  %end;
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+
+  %let ListNoDup = ;
+  %let scanlist = {{bol}}&amp;delim&amp;list&amp;delim{{eol}};
+  %let item = %scan( &amp;scanlist, 2, &amp;delim );
+
+  %do %while ( %length( &amp;item ) &gt; 0 and &amp;item ~= {{eol}} );
+    %if %length( &amp;ListNoDup ) = 0 %then
+      %let ListNoDup = &amp;item;
+    %else
+      %let ListNoDup = &amp;ListNoDup&amp;delim&amp;item;
+    %let scanlist = %sysfunc( tranwrd( &amp;scanlist, &amp;delim&amp;item&amp;delim, &amp;delim ) );
+    %let item = %scan( &amp;scanlist, 2, &amp;delim );
+  %end;
+
+  %let ListNoDup = %unquote( &amp;ListNoDup );
+  &amp;ListNoDup
+
+  %exit:
+
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+%mend ListNoDup;
+
+
+/************************ UNCOMMENT TO TEST ***************************
+
+**options mprint symbolgen mlogic;
+
+filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
+options sasautos=(uiautos sasautos);
+
+%let list = A{B{C{D{E{B{F{A{C{G;
+%let undup = [%ListNoDup( &amp;list, delim={ )];
+%put _user_;
+
+%let list = A B {{bol}} C D;
+%let undup = [%ListNoDup( &amp;list )];
+%put _user_;
+
+%let list = A.B.C.D.E.B.F.A.C.G;
+%let undup = [%ListNoDup( &amp;list, delim=. )];
+%put _user_;
+
+%let list = .A.B.C.D.E.B.F.A.C.G.;
+%let undup = [%ListNoDup( &amp;list, delim=. )];
+%put _user_;
+
+%let list = ..A...B.C..D.E.B.F.A.C.G;
+%let undup = [%ListNoDup( &amp;list, delim=. )];
+%put _user_;
+
+%let list = A B C D E B F A C G;
+%let undup = [%ListNoDup( &amp;list )];
+%put _user_;
+
+%let list = %str(   A   B   C   D E B    F A  C   G   );
+%let undup = [%ListNoDup( &amp;list )];
+%put _user_;
+
+%let list = A B C AA AAA D E B AA F A C G AAAA;
+%let undup = [%ListNoDup( &amp;list )];
+%put _user_;
+
+/**********************************************************************/
+
+      </pre>
+   </body>
+</html>

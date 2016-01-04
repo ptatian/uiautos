@@ -1,0 +1,240 @@
+<!doctype html public "-//w3c//dtd html 4.0 final//en">
+<html>
+   <head>
+      <title>K:\Metro\PTatian\UISUG\Uiautos/FmtSearch.sas</title>
+   </head>
+   <body>
+      <pre>
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: FmtSearch
+
+ Description: Autocall macro to manage multiple SAS format libraries.
+ 
+ Written by Pete Lund, presented at SUGI 28, "Keep Those Formats
+ Rolling: A Macro to Manage the FMTSEARCH= Option."
+ &lt;http://www2.sas.com/proceedings/sugi28/116-28.pdf&gt;
+
+ Use: Open code
+ 
+ Author: Pete Lund
+ 
+***********************************************************************/
+
+%macro FmtSearch(
+  Action=M, /** Action to perform on catalog **/
+  A=,      /** Action to perform on catalog (alt parameter) **/
+  Cat=,    /** Name of format catalog **/
+  C=,      /** Name of format catalog (alt parameter) **/
+  Status=Y,
+  Recurse=N
+  );
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %FmtSearch( cat=General, action=E )
+       add the catalog General.Formats to the end of the format search
+
+    macro variables/parameters
+      Cat (C):    name of the format catalog
+      Action (A): What do you want to do with the catalog:
+         B = put it at the beginning of the format search list,
+             even before WORK.FORMATS and LIBRARY.FORMATS
+         E = put it at the end of the format search list
+         D = remove it from the format search list
+         M = put it in the "middle" of the format search list.  It
+             will go after WORK.FORMATS and LIBRARY.FORMATS and before
+             any user-defined catalogs in the search list.
+         L = simply lists the current format search list
+
+     notes: The M does work, it's just that when B has been previously 
+            used, WORK and LIBRARY have been explicitely set and a     
+            later M will still go at the front.                        
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local _FMS i pos _ThisCat _Index1 _Index2 _ByVal NumCats;
+  %global _NewFMS _Recurse;
+
+  %if &amp;C ne %str() %then %let Cat = &amp;C;
+  %if &amp;A ne %str() %then %let Action = &amp;A;
+  %let Action = %upcase(&amp;Action);
+
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+  %if %index(BMEDXLZ,&amp;Action) eq 0 or
+      %length(&amp;Action) ne 1 %then
+    %do;
+      %put ;
+      %put %str(=====================================================================);
+      %err_mput( macro=FmtSearch, msg=No valid action requested. Cat=&amp;Cat Action=&amp;Action )
+      %put %str(=====================================================================);
+      %put ;
+      %goto Finish;
+    %end;
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+
+  %if &amp;Cat eq %str() and &amp;Action ne L and &amp;Action ne X and &amp;Action ne Z %then
+    %do;
+      %put Here%str(%')s a list:;
+      %goto Finish;
+    %end;
+
+  %if &amp;Action eq X %then 
+    %do;
+      options fmtsearch=();
+      %let Cat = %str();
+    %end;
+
+  %let Cat = %sysfunc(tranwrd(%upcase(&amp;Cat),%str(.FORMATS),%str()));
+  %if &amp;Cat ne %str() %then %let Cat = %sysfunc(compbl(&amp;Cat));
+
+  %let NumCats = %eval(%length(&amp;Cat) - %length(%sysfunc(compress(&amp;Cat,%str( )))) +1);
+  %if &amp;Action eq Z %then %let NumCats = 1;
+
+  %if &amp;NumCats ge 1 %then
+    %do;
+      %if &amp;Action eq M or &amp;Action eq B %then
+        %do;
+          %let _Index1 = &amp;NumCats;
+          %let _Index2 = 1;
+          %let _ByVal  = -1;
+        %end;
+      %else
+        %do;
+          %let _Index1 = 1;
+          %let _Index2 = &amp;NumCats;
+          %let _ByVal  = 1;
+        %end;
+      %do i = &amp;_Index1 %to &amp;_Index2 %by &amp;_ByVal;
+        %let _ThisCat = %scan(&amp;Cat,&amp;i,%str( ));
+
+        %let _FMS   = 
+           %upcase(%sysfunc(compress(%sysfunc(getoption(fmtsearch)),%str(%(%)))));
+        %let _FMS   = %sysfunc(tranwrd(&amp;_FMS,%str(.FORMATS),%str()));
+
+        %if &amp;Action eq Z %then 
+          %do;
+            %put FMS: &amp;_FMS;
+            %let _FMS   = %sysfunc(tranwrd(&amp;_FMS,%str(WORK),%str()));
+            %let _FMS   = %sysfunc(tranwrd(&amp;_FMS,%str(LIBRARY),%str()));
+            options fmtsearch=(&amp;_FMS);
+          %end;
+
+        %if &amp;Action eq D or &amp;Action eq M or &amp;Action eq B or &amp;Action eq E  %then
+          %do;
+            %let _NewFMS = %sysfunc(tranwrd(%str( &amp;_FMS ),%str( &amp;_ThisCat ),%str()));
+            %if &amp;_NewFMS ne %str() %then
+              %do;
+                /*%if %substr(&amp;_NewFMS,1,%sysfunc(min(12,%length(&amp;_NewFMS)))) eq WORK LIBRARY %then %let _NewFMS = %substr(&amp;_NewFMS,13);*/
+                %if %substr(&amp;_NewFMS,1,%sysfunc(min(12,%length(&amp;_NewFMS)))) eq WORK LIBRARY %then %let _NewFMS = %substr(&amp;_NewFMS%str( ),13);
+              %end;
+            %if &amp;Action eq D %then %str(options fmtsearch=(&amp;_NewFMS););
+          %end;
+
+        %if &amp;Action eq M %then
+          %do;
+            options fmtsearch=(&amp;_ThisCat &amp;_NewFMS);
+          %end;
+
+        %if &amp;Action eq B %then
+          %do;
+            %let _NewCat = &amp;_ThisCat;
+            %if %sysfunc(indexw(&amp;_NewFMS,WORK)) eq 0 and &amp;_ThisCat ne WORK %then 
+              %let _NewCat = &amp;_NewCat WORK;
+            %if %sysfunc(indexw(&amp;_NewFMS,LIBRARY)) eq 0 and &amp;_ThisCat ne LIBRARY %then 
+              %let _NewCat = &amp;_NewCat LIBRARY;
+            options fmtsearch=(&amp;_NewCat &amp;_NewFMS);
+          %end;
+
+        %if &amp;Action eq E %then
+          %do;
+            options fmtsearch=(&amp;_NewFMS &amp;_ThisCat);
+          %end;
+      %end;
+    %end;
+
+  %if %mparam_is_yes( &amp;Status ) %then
+    %do;
+      %put; 
+      %put %str(=====================================================================);
+      %let _FMS = %upcase(%sysfunc(compress(%sysfunc(getoption(fmtsearch)),%str(%(%)))));
+      %if %sysfunc(indexw(%upcase(&amp;_FMS),LIBRARY)) eq 0 %then
+        %let _FMS = LIBRARY* &amp;_FMS;
+      %if %sysfunc(indexw(%upcase(&amp;_FMS),WORK)) eq 0 %then %let _FMS = WORK* &amp;_FMS;
+      %put Current FmtSearch Option value:;
+      %put ;
+      %put %str(     )&amp;_FMS;
+      %put ;
+      %if %index(&amp;_FMS,*) ne 0 %then
+        %do;
+          %put %str(   )*implicitly included by default.;
+          %put;
+        %end;
+
+      %let _FMS = %sysfunc(compress(&amp;_FMS,%str(*)));
+      %put %str(=====================================================================);
+      %put Status of current catalogs:;
+      %put ;
+      %let i = 1;
+      %do %while(%scan(&amp;_FMS,&amp;i,%str( )) ne %str( ));
+        %let ThisCat = %scan(&amp;_FMS,&amp;i,%str( ));
+        %if %index(&amp;ThisCat,.) eq 0 %then %let ThisCat = &amp;ThisCat..FORMATS;
+        %if %sysfunc(cexist(&amp;ThisCat)) eq 1 %then 
+          %put NOTE:    &amp;ThisCat EXISTS;
+        %else 
+          %put NOTE:    &amp;ThisCat DOES NOT EXIST;
+        %let i = %eval(&amp;i + 1);
+      %end;
+      %put %str(=====================================================================);
+      %put ;
+    %end;
+
+  %Finish:
+  %let _Recurse = %str();
+  
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+%mend FmtSearch;
+
+
+/************************ UNCOMMENT TO TEST ***************************
+
+libname Test 'D:\';
+
+%FmtSearch( action=L )
+
+%FmtSearch( cat=Test, action=0 )
+
+%FmtSearch( cat=Test, action=E )
+
+/**********************************************************************/
+
+
+/*********************** ORIGINAL HEADER ******************************/
+/*-------------------------------------------------------------------*/
+/* program:    FmtSearch.sas                                      |  */
+/* programmer: Pete Lund                                          |©N*/
+/*             (360) 528-8970                                     |2W*/
+/* date:       September 2002                                     |0C*/
+/* project:    Utility macro                                      |0S*/
+/*                                                                |3R*/
+/* purpose: Manages the FMTSEARCH option                          |  */
+/*                                                                |  */
+/*                                                                |  */
+/*-------------------------------------------------------------------*/
+
+      </pre>
+   </body>
+</html>

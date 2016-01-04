@@ -1,0 +1,93 @@
+<!doctype html public "-//w3c//dtd html 4.0 final//en">
+<html>
+   <head>
+      <title>K:\Metro\PTatian\UISUG\Uiautos/Moe_sum.sas</title>
+   </head>
+   <body>
+      <pre>
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Moe_sum
+
+ Description: Autocall macro that returns a calculation for a margin of error 
+ for a derived sum of values from the individual margins of error comprising
+ the sum.
+ 
+ Use: Function
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
+
+%macro moe_sum( 
+  var=           /** List of variables containing MOE values to sum **/
+  );
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %moe_sum( var=a_moe b_moe c_moe )
+       returns calculation for margin of error based on sum of the 
+       margins of error for three values a_moe, b_moe, and c_moe
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local i v calc;
+    
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+  
+  %let calc = sqrt( ;
+  %let i = 1;
+  %let v = %scan( &amp;var, &amp;i, %str( ) );
+
+  %do %until ( &amp;v = );
+
+    %let calc = &amp;calc (&amp;v)*(&amp;v);
+    
+    %let i = %eval( &amp;i + 1 );
+    %let v = %scan( &amp;var, &amp;i, %str( ) );
+    
+    %if &amp;v ~= %then %let calc = &amp;calc +;
+
+  %end;
+  
+  %let calc = &amp;calc );
+  
+  (&amp;calc)
+
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+%mend moe_sum;
+
+
+/************************ UNCOMMENT TO TEST ***************************
+
+options mprint;
+
+data _null_;
+
+  sum = 45 + 50 + 55;
+  moe = %moe_sum( var=5 4 2 );
+  put sum= moe=;
+
+run;
+
+/**********************************************************************/
+
+
+      </pre>
+   </body>
+</html>
