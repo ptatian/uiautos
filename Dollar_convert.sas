@@ -45,6 +45,9 @@
      2) Items: All items (series=CUUR0000SA0)
                All items less shelter (series=CUUR0000SA0L2)
      3) Not Seasonally Adjusted
+   Click "Get Data"
+   Check "include annual averages"
+   Click GO
      
    When adding data for a new year, be sure to add a new 
    CPI_ macro variable for that year to the %local declaration list
@@ -75,6 +78,7 @@
    07/11/13  GM Updated 2012 to full year.
    02/3/14   BL Updated 2013 to full year.
    07/01/14  RP Updated 2014 to half year
+   01/11/16  PT Updated 2014 to ANNUAL; 2015 to HALF1. 
 
   *********************************************************************/
 
@@ -88,12 +92,13 @@
     CPI_1991 CPI_1992 CPI_1993 CPI_1994 CPI_1995 CPI_1996
     CPI_1997 CPI_1998 CPI_1999 CPI_2000 CPI_2001 CPI_2002
     CPI_2003 CPI_2004 CPI_2005 CPI_2006 CPI_2007 CPI_2008
-    CPI_2009 CPI_2010 CPI_2011 CPI_2012 CPI_2013 CPI_2014;
+    CPI_2009 CPI_2010 CPI_2011 CPI_2012 CPI_2013 CPI_2014
+    CPI_2015;
 
   %global _dcnv_count;
 
   %let MIN_YEAR = 1979;
-  %let MAX_YEAR = 2014;
+  %let MAX_YEAR = 2015;
 
   %let series = %upcase( &series );
 
@@ -141,7 +146,8 @@
     %let CPI_2011 = 224.939;  %** Full year 2011 **;
 	%let CPI_2012 = 229.594;  %** Full year 2012 **;
 	%let CPI_2013 = 232.957;  %** Full year 2013 **;
-	%let CPI_2014 = 235.99;   %** Half year 2014 **;
+	%let CPI_2014 = 236.736;  %** ANNUAL 2014 **;
+	%let CPI_2015 = 236.265;  %** HALF1 2015 **;
   %end;
   %else %if &series = CUUR0000SA0L2 %then %do;
     %************************************************** 
@@ -187,7 +193,8 @@
     %let CPI_2011 = 217.048;  %** Full year 2011 **;
 	%let CPI_2012 = 221.446;  %** Full year 2012 **;
 	%let CPI_2013 = 223.820;  %** Full year 2013 **;
-	%let CPI_2014 = 226.038;  %** Half year 2014 **;
+	%let CPI_2014 = 226.192;  %** ANNUAL 2014 **;
+	%let CPI_2015 = 223.142;  %** HALF1 2015 **;
   %end;
   %else %do;
     %err_mput( macro=Dollar_convert, msg=Invalid SERIES= value: &series )
@@ -257,7 +264,7 @@ options sasautos=(uiautos sasautos);
 options mprint nosymbolgen nomlogic;
 options msglevel=i;
 
-%let last_year = 2012;
+%let last_year = 2015;
 
 %let i = 12345;
 %let _i = 67890;
@@ -286,7 +293,8 @@ data _null_;
   %dollar_convert( 100, amount2, &last_year, 1995, quiet=N, series=CUUR0000SA0L2 );
   put amount2=;
   
-  %dollar_convert( 100, amount2, 1995, 2020, quiet=N, series=CUUR0000SA0L2 );
+  ** NEXT INVOCATION IS MEANT TO PRODUCE AN ERROR **;
+  %dollar_convert( 100, amount2, 1995, 2030, quiet=N, series=CUUR0000SA0L2 );
   put amount2=;
 
 run;
