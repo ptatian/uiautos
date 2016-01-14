@@ -17,13 +17,15 @@
   prefix=,         /** Prefix for input data set names (optional) **/
   suffix=,         /** Suffix for input data set names (optional) **/
   print=Y,         /** Print results to output destination (Y/N) **/
-  csv_out=         /** Pathname for CSV file for results (optional) **/
+  csv_out=         /** Pathname for CSV file for results, in quotes (optional) **/
 );
 
   /*************************** USAGE NOTES *****************************
    
    SAMPLE CALL: 
-     %{macro name}(  )
+     %Compare_file_struct( file_list=A B C )
+       compares file structures of WORK library data sets A, B, and C
+       and prints results to output destination.
 
   *********************************************************************/
 
@@ -34,7 +36,7 @@
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %local i file;
+  %local i file merge_list;
     
   %note_mput( macro=Compare_file_struct, msg=Macro starting. )
   
@@ -65,6 +67,8 @@
   
 
   %***** ***** ***** MACRO BODY ***** ***** *****;
+  
+  %let merge_list = ;
 
   %let i = 1;
   %let file = %scan( &file_list, &i );
@@ -73,11 +77,12 @@
 
     proc contents noprint
       data=&lib..&prefix.&file.&suffix
-      out=_Cts_&prefix.&file.&suffix (keep=name type length compress=no);
+      out=_Cts_&i (keep=name type length compress=no);
+    run;
 
-    data _Cts_&prefix.&file.&suffix (compress=no);
+    data _Cts_&i (compress=no);
     
-      set _Cts_&prefix.&file.&suffix;
+      set _Cts_&i;
     
       name = lowcase( name );
       
@@ -92,10 +97,11 @@
 
     run;
 
-    proc sort data=_Cts_&prefix.&file.&suffix out=_Cts_&prefix.&file.&suffix (compress=no);
+    proc sort data=_Cts_&i out=_Cts_&i (compress=no);
       by name;
-      
     run;
+    
+    %let merge_list = &merge_list _Cts_&i;
     
     %let i = %eval( &i + 1 );
     %let file = %scan( &file_list, &i );
@@ -104,22 +110,7 @@
   
   data _Compare_file_struct (compress=no);
 
-    merge
-
-      %let i = 1;
-      %let file = %scan( &file_list, &i );
-      
-      %do %while( &file ~= );
-      
-        _Cts_&prefix.&file.&suffix
-        
-        %let i = %eval( &i + 1 );
-        %let file = %scan( &file_list, &i );
-      
-      %end;
-      
-      ;
-  
+    merge &merge_list;
     by name;
 
   run;
@@ -134,7 +125,7 @@
 
   %if &csv_out ~= %then %do;
 
-    filename fexport "&csv_out" lrecl=5000;
+    filename fexport &csv_out lrecl=5000;
 
     proc export data=_Compare_file_struct
         outfile=fexport
@@ -151,8 +142,6 @@
     run;
   %end;
 
-  %exit:
-
 
   %***** ***** ***** CLEAN UP ***** ***** *****;
 
@@ -161,12 +150,15 @@
   quit;
 
 
+  %exit:
+
   %note_mput( macro=Compare_file_struct, msg=Macro exiting. )  
+  
 
 %mend Compare_file_struct;
 
 
-/************************ UNCOMMENT TO TEST ***************************/
+/************************ UNCOMMENT TO TEST ***************************
 
   ** Locations of SAS autocall macro libraries **;
 
@@ -174,6 +166,8 @@
   options sasautos=(uiautos sasautos);
   
   options mprint nosymbolgen nomlogic;
+  
+  ** Create test data sets **;
 
   data A;
     length x $ 1 y 8 z 4;
@@ -186,10 +180,41 @@
   data C;
     length x $ 1 y 8 z 4 xx $ 50;
   run;
+
+  ** Check error handling **;
   
-  %Compare_file_struct( file_list=A B C, print=n )
+  %Compare_file_struct( file_list=A )
+  %Compare_file_struct( file_list=A XXX )
   
+  ** First test **;
+
+  %Compare_file_struct( file_list=A B C, print=y, out=Results, csv_out="D:\Projects\UISUG\Uiautos\Compare_file_struct_results.csv" )
+  
+  %File_info( data=Results, stats= )
+
   proc datasets library=work memtype=(data);
   quit;
-
+  
+  %put _user_;
+  
+  ** Second test **;
+  
+  libname rp 'L:\Libraries\RealProp\Data';
+  
+  %Compare_file_struct(
+    lib=rp,
+    file_list=
+      2001_04 2001_10a 2001_10b 
+      2002_05 2002_09 2002_11 
+      2003_01 2003_07 
+      2004_01 2004_07 2004_12 
+      2005_03 2005_05 2005_06 2005_11 2005_12
+      2006_03 2006_07 2006_09 2006_12 
+      2007_05 2007_09 2007_11
+      2008_01 2008_06 2008_11
+      2009_01 2009_04 2009_06 2009_09 2009_11,
+    prefix=Ownerpt_
+  )
+  
+  
 /**********************************************************************/
