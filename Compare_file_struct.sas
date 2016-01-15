@@ -36,7 +36,7 @@
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %local i file merge_list;
+  %local i file merge_list var;
     
   %note_mput( macro=Compare_file_struct, msg=Macro starting. )
   
@@ -86,12 +86,15 @@
     
       name = lowcase( name );
       
-      if type = 1 then
-        typlen_&file = 'N' || left( put( length, 7. ) );
-      else
-        typlen_&file = 'C' || left( put( length, 7. ) );
+      %if %sysfunc( anydigit( &file ) ) = 1 %then %let var = _&file;
+      %else %let var = &file;        
       
-      label typlen_&file = "&file";
+      if type = 1 then
+        &var = 'N' || left( put( length, 7. ) );
+      else
+        &var = 'C' || left( put( length, 7. ) );
+      
+      label &var = "&file";
       
       drop type length;
 
@@ -213,8 +216,11 @@
       2007_05 2007_09 2007_11
       2008_01 2008_06 2008_11
       2009_01 2009_04 2009_06 2009_09 2009_11,
-    prefix=Ownerpt_
+    prefix=Ownerpt_,
+    out=Results2,
+    csv_out="D:\Projects\UISUG\Uiautos\Compare_file_struct_results2.csv"
   )
   
+  %File_info( data=Results2, stats= )
   
 /**********************************************************************/
