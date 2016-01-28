@@ -3,7 +3,7 @@
 <head>
 <meta name="Generator" content="SAS Software Version 9.2, see www.sas.com">
 <meta http-equiv="Content-type" content="text/html; charset=windows-1252">
-<title>UI SAS Macro Library</title>
+<title>Urban Institute SAS Macro Library</title>
 <style type="text/css">
 <!--
 .AfterCaption
@@ -1415,7 +1415,7 @@ var _ie = (_info.indexOf("MSIE") > 0
 <a name="IDX"></a>
 <table class="SysTitleAndFooterContainer" width="100%" cellspacing="1" cellpadding="1" rules="none" frame="void" border="0" summary="Page Layout">
 <tr>
-<td class="l SystemTitle">UI SAS Macro Library</td>
+<td class="l SystemTitle">Urban Institute SAS Macro Library</td>
 </tr>
 </table><br>
 <div>
@@ -1458,24 +1458,14 @@ var _ie = (_info.indexOf("MSIE") > 0
 <td class="l Data">Creates HTML pages from metadata repository created by the Update_metadata() macro.</td>
 </tr>
 <tr>
-<td class="l Data"><a href="DSLibOnly.htm" target="Code">DSLibOnly</a>
+<td class="l Data"><a href="Dataset_exists.htm" target="Code">Dataset_exists</a>
 </td>
-<td class="l Data">Autocall macro that returns the library name portion of a libname.dataset specification.</td>
-</tr>
-<tr>
-<td class="l Data"><a href="DSNameOnly.htm" target="Code">DSNameOnly</a>
-</td>
-<td class="l Data">Autocall macro that returns the data set name portion of a libname.dataset specification.</td>
+<td class="l Data">Returns TRUE (1) if a data set exists, FALSE (0) if not.</td>
 </tr>
 <tr>
 <td class="l Data"><a href="Data_to_format.htm" target="Code">Data_to_format</a>
 </td>
 <td class="l Data">Create a format using values from a data set</td>
-</tr>
-<tr>
-<td class="l Data"><a href="Dataset_exists.htm" target="Code">Dataset_exists</a>
-</td>
-<td class="l Data">Returns TRUE (1) if a data set exists, FALSE (0) if not.</td>
 </tr>
 <tr>
 <td class="l Data"><a href="Delete_metadata_file.htm" target="Code">Delete_metadata_file</a>
@@ -1501,6 +1491,16 @@ var _ie = (_info.indexOf("MSIE") > 0
 <td class="l Data"><a href="Dollar_convert.htm" target="Code">Dollar_convert</a>
 </td>
 <td class="l Data">Converts dollars using CPI.</td>
+</tr>
+<tr>
+<td class="l Data"><a href="DSLibOnly.htm" target="Code">DSLibOnly</a>
+</td>
+<td class="l Data">Autocall macro that returns the library name portion of a libname.dataset specification.</td>
+</tr>
+<tr>
+<td class="l Data"><a href="DSNameOnly.htm" target="Code">DSNameOnly</a>
+</td>
+<td class="l Data">Autocall macro that returns the data set name portion of a libname.dataset specification.</td>
 </tr>
 <tr>
 <td class="l Data"><a href="Dup_check.htm" target="Code">Dup_check</a>
@@ -1573,14 +1573,14 @@ var _ie = (_info.indexOf("MSIE") > 0
 <td class="l Data">Autocall macro returns a union of items between two lists.  All duplicate items are removed.</td>
 </tr>
 <tr>
-<td class="l Data"><a href="MCapitalize.htm" target="Code">MCapitalize</a>
-</td>
-<td class="l Data">Autocall macro returns macro text value with first letter capitalized and the rest lowercase.</td>
-</tr>
-<tr>
 <td class="l Data"><a href="MacroSearch.htm" target="Code">MacroSearch</a>
 </td>
 <td class="l Data">Autocall macro to manage multiple SAS macro libraries. Adapted from FmtSearch by Pete Lund.</td>
+</tr>
+<tr>
+<td class="l Data"><a href="MCapitalize.htm" target="Code">MCapitalize</a>
+</td>
+<td class="l Data">Autocall macro returns macro text value with first letter capitalized and the rest lowercase.</td>
 </tr>
 <tr>
 <td class="l Data"><a href="Moe_conv.htm" target="Code">Moe_conv</a>
@@ -1611,6 +1611,16 @@ var _ie = (_info.indexOf("MSIE") > 0
 <td class="l Data"><a href="Moving_avg.htm" target="Code">Moving_avg</a>
 </td>
 <td class="l Data">Calculate a moving average for variables of the form xxx_nnn and assign to specified variable. Label variable.</td>
+</tr>
+<tr>
+<td class="l Data"><a href="mparam_is_no.htm" target="Code">mparam_is_no</a>
+</td>
+<td class="l Data">Returns 1 if the macro parameter value is &quot;No&quot; (could be &quot;n&quot;, &quot;N&quot;, &quot;nO&quot;, etc.)</td>
+</tr>
+<tr>
+<td class="l Data"><a href="mparam_is_yes.htm" target="Code">mparam_is_yes</a>
+</td>
+<td class="l Data">Returns 1 if the macro parameter value is &quot;Yes&quot; (could be &quot;y&quot;, &quot;Y&quot;, &quot;Yes&quot;, &quot;YE&quot;, etc.)</td>
 </tr>
 <tr>
 <td class="l Data"><a href="Note_mput.htm" target="Code">Note_mput</a>
@@ -1672,21 +1682,16 @@ var _ie = (_info.indexOf("MSIE") > 0
 </td>
 <td class="l Data">Write a macro-generated warning message to the SAS LOG using PUT.</td>
 </tr>
-<tr>
-<td class="l Data"><a href="mparam_is_no.htm" target="Code">mparam_is_no</a>
-</td>
-<td class="l Data">Returns 1 if the macro parameter value is &quot;No&quot; (could be &quot;n&quot;, &quot;N&quot;, &quot;nO&quot;, etc.)</td>
-</tr>
-<tr>
-<td class="l Data"><a href="mparam_is_yes.htm" target="Code">mparam_is_yes</a>
-</td>
-<td class="l Data">Returns 1 if the macro parameter value is &quot;Yes&quot; (could be &quot;y&quot;, &quot;Y&quot;, &quot;Yes&quot;, &quot;YE&quot;, etc.)</td>
-</tr>
 </tbody>
 </table>
 </div>
 </div>
 <br>
+<table class="SysTitleAndFooterContainer" width="100%" cellspacing="1" cellpadding="1" rules="none" frame="void" border="0" summary="Page Layout">
+<tr>
+<td class="l SystemFooter">Updated 01/28/2016</td>
+</tr>
+</table><br>
 </div>
 </body>
 </html>
