@@ -32,13 +32,15 @@
   *********************************************************************/
 
   /*************************** UPDATE NOTES ****************************
-
+  
+  02-01-16 PAT Corrected error when list has more than 2 duplicates of
+               same item.
 
   *********************************************************************/
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %local ListNoDup scanlist item;
+  %local ListNoDup scanlist target i v;
     
     
   %***** ***** ***** ERROR CHECKS ***** ***** *****;
@@ -57,15 +59,39 @@
 
   %let ListNoDup = ;
   %let scanlist = {{bol}}&amp;delim&amp;list&amp;delim{{eol}};
-  %let item = %scan( &amp;scanlist, 2, &amp;delim );
+  %let target = %scan( &amp;scanlist, 2, &amp;delim );
 
-  %do %while ( %length( &amp;item ) &gt; 0 and &amp;item ~= {{eol}} );
+  %do %while ( %length( &amp;target ) &gt; 0 and &amp;target ~= {{eol}} );
+  
+    %** Add item to unduplicated list **;
     %if %length( &amp;ListNoDup ) = 0 %then
-      %let ListNoDup = &amp;item;
+      %let ListNoDup = &amp;target;
     %else
-      %let ListNoDup = &amp;ListNoDup&amp;delim&amp;item;
-    %let scanlist = %sysfunc( tranwrd( &amp;scanlist, &amp;delim&amp;item&amp;delim, &amp;delim ) );
-    %let item = %scan( &amp;scanlist, 2, &amp;delim );
+      %let ListNoDup = &amp;ListNoDup&amp;delim&amp;target;
+      
+    %** Remove all other occurances of item **;
+
+    %let i = 1;
+    %let v = %scan( &amp;scanlist, &amp;i, &amp;delim );
+    %let newscanlist = ;
+
+    %do %until ( &amp;v = );
+
+      %if &amp;v ~= &amp;target %then %do;
+        %if %length( &amp;newscanlist ) = 0 %then
+          %let newscanlist = &amp;v;
+        %else 
+          %let newscanlist = &amp;newscanlist&amp;delim&amp;v;
+      %end;
+
+      %let i = %eval( &amp;i + 1 );
+      %let v = %scan( &amp;scanlist, &amp;i, &amp;delim );
+
+    %end;
+
+    %let scanlist = &amp;newscanlist;
+    %let target = %scan( &amp;scanlist, 2, &amp;delim );
+
   %end;
 
   %let ListNoDup = %unquote( &amp;ListNoDup );
@@ -81,15 +107,17 @@
 
 /************************ UNCOMMENT TO TEST ***************************
 
-**options mprint symbolgen mlogic;
+*options mprint symbolgen mlogic;
 
 filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
 options sasautos=(uiautos sasautos);
 
+%** This test generates an error **;
 %let list = A{B{C{D{E{B{F{A{C{G;
 %let undup = [%ListNoDup( &amp;list, delim={ )];
 %put _user_;
 
+%** This test generates an error **;
 %let list = A B {{bol}} C D;
 %let undup = [%ListNoDup( &amp;list )];
 %put _user_;
@@ -114,7 +142,11 @@ options sasautos=(uiautos sasautos);
 %let undup = [%ListNoDup( &amp;list )];
 %put _user_;
 
-%let list = A B C AA AAA D E B AA F A C G AAAA;
+%let list = A B C AA AAA D E B AA F A AA C G AAAA;
+%let undup = [%ListNoDup( &amp;list )];
+%put _user_;
+
+%let list = 0001 0001 0002 0002 0002 0002 0002 0002 0002 0100;
 %let undup = [%ListNoDup( &amp;list )];
 %put _user_;
 
