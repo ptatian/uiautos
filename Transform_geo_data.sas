@@ -99,11 +99,11 @@
      NOTES:
        The weighting file is assumed to be normalized, that is, the values
        of the count weight variable (wgt_count_var=) must sum to 1 for each value of 
-       the original geography variable (wgt_org_geo=).
-       Values of the proportion weight variable (wgt_prop_var=) must average to 1 for each
-       value of the original geography variable (wgt_org_geo=).
+       the original geography variable (wgt_org_geo=) and 
+       values of the proportion weight variable (wgt_prop_var=) must sum to 1 for each
+       value of the new geography variable (wgt_new_geo=).
     
-       Neither the weight file nor the input file must be sorted.
+       Neither the weight file nor the input file needs to be sorted.
     
        The keep_nonmatch= parameter controls how obs. in the input data set
        that do not have a matching geo ID in the weighting data set are 
