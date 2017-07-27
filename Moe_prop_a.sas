@@ -32,7 +32,8 @@
   num=,       /** Proportion numerator value **/
   den=,       /** Proportion denominator value **/
   num_moe=,   /** Numerator margin of error **/
-  den_moe=    /** Denominator margin of error **/
+  den_moe=,   /** Denominator margin of error **/
+  label_moe=   /** Label margin of error (optional, enclose in quotes) **/
   );
 
   /*************************** USAGE NOTES *****************************
@@ -72,6 +73,10 @@
     &var = (&mult) * %moe_ratio( num=&num, den=&den, num_moe=&num_moe, den_moe=&den_moe );
   end;
 
+  %if %length( &label_moe ) > 0 %then %do;
+    label &var = &label_moe;
+  %end;
+
 %mend Moe_prop_a;
 
 
@@ -79,7 +84,7 @@
 
 options mprint;
 
-data _null_;
+data A;
 
   prop = 45/100;
   %moe_prop_a( var=moe1, num=45, den=100, num_moe=10, den_moe=15 );
@@ -88,6 +93,12 @@ data _null_;
   %moe_prop_a( var=moe2, num=45, den=100, num_moe=10, den_moe=0, mult=100 );
   put prop= moe2=;
 
+  %moe_prop_a( var=moe3, num=45, den=100, num_moe=10, den_moe=15, label_moe="Margin of error" );
+  put prop= moe3=;
+
+run;
+
+proc contents data=A;
 run;
 
 /**********************************************************************/
