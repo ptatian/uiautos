@@ -119,7 +119,7 @@
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %local sortvars SAS_DATASET_VIEW lib_exists ds_name25 allfvar i em num_fval_vars;
+  %local sortvars SAS_DATASET_VIEW lib_exists ds_name25 allfvar i em num_fval_vars num_vars;
 
   %let SAS_DATASET_VIEW = "SASDSV";
     
@@ -204,11 +204,28 @@
     proc print data=_cnts_&ds_name25;
   %end;
   
-  ** Get descriptive statistics for numeric variables **;
-  
   %if %length( &desc_stats ) > 0 %then %do;
   
-    %Compile_num_desc( stats=&desc_stats, ds_lib=&ds_lib, ds_name=&ds_name )
+    ** Check for numeric variables **;
+  
+    proc sql;
+      select name into :num_vars separated by ' '
+      from dictionary.columns
+      where upcase(libname)="%upcase(&ds_lib)" and upcase(memname)="%upcase(&ds_name)" and upcase(type) = "NUM";
+    quit;
+    
+    %if %length( &num_vars ) > 0 %then %do;
+    
+      ** Get descriptive statistics for numeric variables **;
+   
+      %Compile_num_desc( stats=&desc_stats, ds_lib=&ds_lib, ds_name=&ds_name )
+      
+    %end;
+    %else %do;
+    
+      %note_mput( macro=Update_metadata_file, msg=No numeric variables in data set %upcase(&ds_lib..&ds_name). )
+    
+    %end;
     
   %end;
   
@@ -233,7 +250,7 @@
 
   data _info_&ds_name25;
   
-    %if %length( &desc_stats ) > 0 %then %do;
+    %if %length( &desc_stats ) > 0 and %length( &num_vars ) > 0 %then %do;
 
       merge _cnts_&ds_name25 &_compile_num_desc_out (rename=(_name_=name));
       by name;
@@ -282,7 +299,7 @@
     _v_&ds_name25
       (keep=libname_display memname varnum name VarNameUC label VarType length format
             ListFmtVals
-              %if %length( &desc_stats ) > 0 %then %do;
+              %if %length( &desc_stats ) > 0 and %length( &num_vars ) > 0 %then %do;
                 _desc_:
               %end;
        rename=(libname_display=Library memname=FileName varnum=VarOrder name=VarName label=VarDesc
@@ -752,12 +769,19 @@
 
 
 
-/************************ UNCOMMENT TO TEST ***************************
+/************************ UNCOMMENT TO TEST ***************************/
 
 ** Autocall macros **;
 
 filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
-options sasautos=(uiautos sasautos);
+options sasautos=(uiautos sasautos) noxwait;
+
+** Set up and clear test folder **;
+
+x "md d:\temp\Update_metadata_file_test";
+x "del /q d:\temp\Update_metadata_file_test\*.*";
+
+libname test "d:\temp\Update_metadata_file_test\";
 
 proc format library=work;
   value $region
@@ -772,47 +796,76 @@ proc format library=work;
     "United States" = "~United States"
     "Western Europe" = "~Western Europe";
     
-data Shoes;
+data Test.Shoes;
 
   set Sashelp.shoes;
   
+  dtvar = datetime();
+  
   format region $region.;
+  format dtvar datetime.;
   
 run;
 
-%File_info( data=shoes, freqvars=region )
+data Test.Shoes_nonum;
+
+  set Test.shoes;
+  
+  keep _character_;
+  
+run;
+
+data Test.Shoes_empty;
+
+  set Test.shoes (obs=0);
+  
+run;
+
+%File_info( data=Test.shoes, freqvars=region )
+%File_info( data=Test.shoes_nonum, stats= )
+%File_info( data=Test.shoes_empty, stats= )
 
 %Update_metadata_file( 
-         ds_lib=Work,
+         ds_lib=Test,
          ds_name=Shoes,
          creator=SAS Institute,
          creator_process=SAS Institute,
          revisions=Test file.,
-         meta_lib=work
+         meta_lib=Test
       )
 
 %Update_metadata_library( 
-         lib_name=Work,
+         lib_name=Test,
          lib_desc=Test library,
-         meta_lib=work
+         meta_lib=Test
       )
 
 %Update_metadata_file( 
-         ds_lib=Work,
+         ds_lib=Test,
          ds_name=Shoes,
          creator=SAS Institute,
          creator_process=SAS Institute,
          revisions=Test file.,
-         meta_lib=work,
+         meta_lib=Test,
          mprint=y
       )
 
-proc datasets library=work memtype=(data);
+%Update_metadata_file( 
+         ds_lib=Test,
+         ds_name=Shoes_nonum,
+         creator=SAS Institute,
+         creator_process=SAS Institute,
+         revisions=Test file.,
+         meta_lib=Test,
+         mprint=y
+      )
+
+proc datasets library=Test memtype=(data);
 quit;
 
-%File_info( data=Meta_files, printobs=50, contents=n, stats= )
-%File_info( data=Meta_vars, printobs=50, contents=n, stats= )
-%File_info( data=Meta_fval, printobs=50, contents=n, stats= )
-%File_info( data=Meta_history, printobs=50, contents=n, stats= )
+%File_info( data=Test.Meta_files, printobs=50, contents=n, stats= )
+%File_info( data=Test.Meta_vars, printobs=50, contents=n, stats= )
+%File_info( data=Test.Meta_fval, printobs=50, contents=n, stats= )
+%File_info( data=Test.Meta_history, printobs=50, contents=n, stats= )
 
 /**********************************************************************/
