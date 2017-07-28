@@ -106,14 +106,15 @@
                  latest dates before). 
    10/21/11  PAT Added macro starting and ending messages to LOG. 
    03/30/14  PAT Added Creator process (FileProcess) to file history pages.
+   07/28/17  PAT Added support for datetime and time vars.
 
   *********************************************************************/
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %local html_doctype date_fmts cur_dt_raw cur_tm_raw cur_dt cur_tm i em;
+  %local html_doctype date_fmts datetime_fmts time_fmts cur_dt_raw cur_tm_raw cur_dt cur_tm i em;
   
-  %Note_mput( macro=Create_metadata_html, msg=Macro (version 10/21/11) starting. )
+  %Note_mput( macro=Create_metadata_html, msg=Macro (version 7/28/17) starting. )
   
   %** HTML document type declaration **;
   
@@ -122,17 +123,17 @@
   %** Date formats (updated for SAS 9.2) **;
 
   %let date_fmts =
-    "/DATE/DATEAMPM/DATETIME/DAY/DDMMYY/" ||
+    "/DATE/DAY/DDMMYY/" ||
     "/DDMMYYB/DDMMYYC/DDMMYYD/DDMMYYN/DDMMYYP/DDMMYYS/" ||
-    "/DOWNAME/DTDATE/DTMONYY/DTWKDATX/DTYEAR/DTYYQC/" ||
-    "/EURDFDD/EURDFDE/EURDFDN/EURDFDT/EURDFDWN/EURDFMN/EURDFMY/EURDFWDX/EURDFWKX/" ||
-    "/HDATE/HEBDATE/HHMM/HOUR/JULDAY/JULIAN/MINGUO/MMDDYY/" ||
+    "/DOWNAME/" ||
+    "/EURDFDD/EURDFDE/EURDFDN/EURDFDWN/EURDFMN/EURDFMY/EURDFWDX/EURDFWKX/" ||
+    "/HDATE/HEBDATE/JULDAY/JULIAN/MINGUO/MMDDYY/" ||
     "/MMDDYYB/MMDDYYC/MMDDYYD/MMDDYYN/MMDDYYP/MMDDYYS/" ||
-    "/MMSS/MMYY/" ||
+    "/MMYY/" ||
     "/MMYYC/MMYYD/MMYYN/MMYYP/MMYYS/" ||
-    "/MONNAME/MONTH/MONYY/NENGO/NLDATE/NLDATEMN/NLDATEW/NLDATEWN/NLDATM/NLDATMAP/" ||
-    "/NLDATMTM/NLDATMW/NLTIMAP/NLTIME/PDJULG/PDJULI/QTR/QTRR/TIME/TIMEAMPM/" ||
-    "/TOD/WEEKDATE/WEEKDATX/WEEKDAY/WEEKU/WEEKV/WEEKW/WORDDATE/WORDDATX/YEAR/YYMM/" ||
+    "/MONNAME/MONTH/MONYY/NENGO/NLDATE/NLDATEMN/NLDATEW/NLDATEWN/" ||
+    "/NLTIMAP/NLTIME/PDJULG/PDJULI/QTR/QTRR/" ||
+    "/WEEKDATE/WEEKDATX/WEEKDAY/WEEKU/WEEKV/WEEKW/WORDDATE/WORDDATX/YEAR/YYMM/" ||
     "/YYMMC/YYMMD/YYMMN/YYMMP/YYMMS/" ||
     "/YYMMDD/" ||
     "/YYMMDDB/YYMMDDC/YYMMDDD/YYMMDDN/YYMMDDP/YYMMDDS/" ||
@@ -140,6 +141,12 @@
     "/YYQC/YYQD/YYQN/YYQP/YYQS/" ||
     "/YYQR/" ||
     "/YYQRC/YYQRD/YYQRN/YYQRP/YYQRS/";
+
+  %let datetime_fmts =
+    "/DATETIME/DATEAMPM/DTDATE/DTMONYY/DTWKDATX/DTYEAR/DTYYQC/EURDFDT/NLDATM/NLDATMAP/NLDATMTM/NLDATMW/";
+    
+  %let time_fmts = 
+    "/HHMM/HOUR/MMSS/TIME/TIMEAMPM/TOD/";
 
   %** Get current date &amp; time for stamping HTML pages **;
   
@@ -454,10 +461,7 @@
                 "_" || trim( lowcase( FileName ) ) || ".&amp;html_suf";
   
   run;
-  
-  *proc print data=&amp;meta_pre._vars;
-  *  title2 "File = &amp;meta_pre._vars";
-    
+
   
   ** Create data set pages **;
   
@@ -490,7 +494,6 @@
               "library=" || trim(library) || " filename=" || trim(filename) ||
               """ nl: ""&amp;em""";
             rc = system( sys_cmd );
-            /***X mail /subject="CREATE_METADATA_HTML() error: No matching variable record for file" nl: "&amp;em";***/
             %let i = %eval( &amp;i + 1 );
             %let em = %scan( &amp;error_notify, &amp;i, %str( ) );
           %end;
@@ -549,7 +552,6 @@
       
       put "&lt;table border=""0"" width=""100%"" cellspacing=""0"" cellpadding=""4""&gt;" /;
       
-      *link = "&amp;html_pre._files.&amp;html_suf#" || trim( lowcase( library ) );
       link = "&amp;html_pre._" || trim( lowcase( library ) ) || ".&amp;html_suf" ;
     
       put "&lt;tr&gt;";
@@ -598,7 +600,6 @@
 
       put "&lt;tr&gt;";
       put "&lt;th align=""left"" valign=""top""&gt;Creator:&lt;/th&gt;";
-      *put "&lt;td align=""left"" valign=""top""&gt;" FileCreator "&lt;/td&gt;";
       put "&lt;td align=""left"" valign=""top""&gt;" link "&lt;/td&gt;";
       put "&lt;/tr&gt;";
 
@@ -835,8 +836,6 @@
     
     VarName = lowcase( VarName );
     
-    *link = "&amp;html_pre._" || trim( FileName ) || ".&amp;html_suf";
-    
     ** Determine if date value **;
     
     if VarFmt ~= "" and index( %upcase(&amp;date_fmts), compress( "/" || VarFmt || "/" ) )
@@ -844,6 +843,22 @@
         IsDateVal = 1;
       else
         IsDateVal = 0;
+
+    ** Determine if datetime value **;
+    
+    if VarFmt ~= "" and index( %upcase(&amp;datetime_fmts), compress( "/" || VarFmt || "/" ) )
+      then
+        IsDatetimeVal = 1;
+      else
+        IsDatetimeVal = 0;
+
+    ** Determine if time value **;
+    
+    if VarFmt ~= "" and index( %upcase(&amp;time_fmts), compress( "/" || VarFmt || "/" ) )
+      then
+        IsTimeVal = 1;
+      else
+        IsTimeVal = 0;
 
     ** Variable name &amp; description **;
     
@@ -854,6 +869,12 @@
       if IsDateVal then
         link = "&lt;td align=""left"" valign=""top"" colspan=""6""&gt;&lt;a name=""" || trim( VarName ) || """&gt;&lt;b&gt;" || 
                trim( VarName ) || "&lt;/b&gt; - " || trim( VarDesc ) || " [SAS date value]&lt;/a&gt;&lt;/td&gt;";
+      else if IsDatetimeVal then
+        link = "&lt;td align=""left"" valign=""top"" colspan=""6""&gt;&lt;a name=""" || trim( VarName ) || """&gt;&lt;b&gt;" || 
+               trim( VarName ) || "&lt;/b&gt; - " || trim( VarDesc ) || " [SAS datetime value]&lt;/a&gt;&lt;/td&gt;";
+      else if IsTimeVal then
+        link = "&lt;td align=""left"" valign=""top"" colspan=""6""&gt;&lt;a name=""" || trim( VarName ) || """&gt;&lt;b&gt;" || 
+               trim( VarName ) || "&lt;/b&gt; - " || trim( VarDesc ) || " [SAS time value]&lt;/a&gt;&lt;/td&gt;";
       else
         link = "&lt;td align=""left"" valign=""top"" colspan=""6""&gt;&lt;a name=""" || trim( VarName ) || """&gt;&lt;b&gt;" || 
                trim( VarName ) || "&lt;/b&gt; - " || trim( VarDesc ) || "&lt;/a&gt;&lt;/td&gt;";
@@ -894,6 +915,52 @@
         put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_std best8. "&lt;/small&gt;&lt;/td&gt;";
         put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_min mmddyy10. "&lt;/small&gt;&lt;/td&gt;";
         put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_max mmddyy10. "&lt;/small&gt;&lt;/td&gt;";
+        put '&lt;td align="right"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;/tr&gt;";      
+
+      end;
+      else if IsDatetimeVal then do;
+
+        put "&lt;tr&gt;";
+        put '&lt;td align="right" width="5%"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;N&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;Mean&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;StdDev (seconds)&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;Min&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;Max&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put '&lt;td align="right"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;/tr&gt;";
+        
+        put "&lt;tr&gt;";
+        put '&lt;td align="right"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_n comma16. "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_mean datetime. "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_std best8. "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_min datetime. "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_max datetime. "&lt;/small&gt;&lt;/td&gt;";
+        put '&lt;td align="right"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;/tr&gt;";      
+
+      end;
+      else if IsTimeVal then do;
+
+        put "&lt;tr&gt;";
+        put '&lt;td align="right" width="5%"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;N&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;Mean&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;StdDev (seconds)&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;Min&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;Max&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
+        put '&lt;td align="right"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;/tr&gt;";
+        
+        put "&lt;tr&gt;";
+        put '&lt;td align="right"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_n comma16. "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_mean time. "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_std best8. "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_min time. "&lt;/small&gt;&lt;/td&gt;";
+        put "&lt;td align=""right""&gt;&lt;small&gt;" _desc_max time. "&lt;/small&gt;&lt;/td&gt;";
         put '&lt;td align="right"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
         put "&lt;/tr&gt;";      
 
@@ -1465,6 +1532,35 @@
 %mend Create_metadata_html;
 
 
+/************************ UNCOMMENT TO TEST ***************************
+
+** NOTE: Requires running testing code for %Update_metadata_file() first
+**       to create metadata files.
+**;
+
+** Autocall macros **;
+
+filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
+options sasautos=(uiautos sasautos) noxwait;
+
+** Test folder **;
+
+libname test "d:\temp\Update_metadata_file_test\";
+
+%Create_metadata_html( 
+         meta_lib= test,
+         meta_pre= meta,
+         meta_title= Test of Metadata System,
+         update_months= 12,
+         creator_fmt=,
+         html_folder= d:\temp\Update_metadata_file_test\,
+         html_pre= meta,
+         html_suf= html,
+         html_title= Test Metadata -,
+         html_stylesht= 
+       )
+
+/**********************************************************************/
       </pre>
    </body>
 </html>

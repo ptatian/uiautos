@@ -111,15 +111,15 @@
    11/09/13  PAT Revised for use with new SAS server setup.
                  Added ds_lib_display=.
                  Removed update_notify= functionality.
+   07/28/17  PAT Will now properly register empty data sets or
+                 data sets without numeric variables. 
+                 Added support for datetime and time vars.
 
-   Next steps:
-    - Handle situation where file has no numeric unformatted vars
-  
   *********************************************************************/
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %local sortvars SAS_DATASET_VIEW lib_exists ds_name25 allfvar i em num_fval_vars;
+  %local sortvars SAS_DATASET_VIEW lib_exists ds_name25 allfvar i em num_fval_vars num_obs num_vars;
 
   %let SAS_DATASET_VIEW = "SASDSV";
     
@@ -204,11 +204,35 @@
     proc print data=_cnts_&ds_name25;
   %end;
   
-  ** Get descriptive statistics for numeric variables **;
+  ** Check for observations **;
+  
+  proc sql noprint;
+    select count(*) into :num_obs
+    from &ds_lib..&ds_name;
+  quit;  
   
   %if %length( &desc_stats ) > 0 %then %do;
   
-    %Compile_num_desc( stats=&desc_stats, ds_lib=&ds_lib, ds_name=&ds_name )
+    ** Check for numeric variables **;
+  
+    proc sql noprint;
+      select name into :num_vars separated by ' '
+      from dictionary.columns
+      where upcase(libname)="%upcase(&ds_lib)" and upcase(memname)="%upcase(&ds_name)" and upcase(type) = "NUM";
+    quit;
+    
+    %if %length( &num_vars ) > 0 and &num_obs > 0 %then %do;
+    
+      ** Get descriptive statistics for numeric variables **;
+   
+      %Compile_num_desc( stats=&desc_stats, ds_lib=&ds_lib, ds_name=&ds_name )
+      
+    %end;
+    %else %do;
+    
+      %note_mput( macro=Update_metadata_file, msg=No numeric variables in data set %upcase(&ds_lib..&ds_name). )
+    
+    %end;
     
   %end;
   
@@ -233,7 +257,7 @@
 
   data _info_&ds_name25;
   
-    %if %length( &desc_stats ) > 0 %then %do;
+    %if %length( &desc_stats ) > 0 and %length( &num_vars ) > 0  and &num_obs > 0 %then %do;
 
       merge _cnts_&ds_name25 &_compile_num_desc_out (rename=(_name_=name));
       by name;
@@ -282,7 +306,7 @@
     _v_&ds_name25
       (keep=libname_display memname varnum name VarNameUC label VarType length format
             ListFmtVals
-              %if %length( &desc_stats ) > 0 %then %do;
+              %if %length( &desc_stats ) > 0 and %length( &num_vars ) > 0 and &num_obs > 0 %then %do;
                 _desc_:
               %end;
        rename=(libname_display=Library memname=FileName varnum=VarOrder name=VarName label=VarDesc
@@ -350,7 +374,7 @@
     
     VarNameUC = upcase( name );
     
-    if format ~= "" and 
+    if format ~= "" and &num_obs > 0 and 
        not index( %upcase(&exclude_fmts||&add_exclude_fmts), compress( "/" || format || "/" ) )
        then
          ListFmtVals = 1;
@@ -414,7 +438,7 @@
 
   *options mprint symbolgen mlogic;
 
-  %if &num_fval_vars > 0 %then %do;
+  %if &num_fval_vars > 0 and &num_obs > 0 %then %do;
 
     %do i = 1 %to &num_fval_vars;
       %let allfvar = &allfvar &&_fvar&i;
@@ -573,7 +597,7 @@
       
     run;
       
-    %if &num_fval_vars > 0 %then %do;
+    %if &num_fval_vars > 0 and &num_obs > 0 %then %do;
     
       data &meta_lib..&meta_pre._fval (compress=char);
       
@@ -629,7 +653,7 @@
 
     run;
   
-    %if &num_fval_vars > 0 %then %do;
+    %if &num_fval_vars > 0 and &num_obs > 0 %then %do;
     
       data _null_;
 
@@ -695,30 +719,6 @@
     
   %end;
   
-  /****** FUNCTION DISABLED ******
-    
-  ** Notify by email of metadata update **;
-  
-  %if %length( &update_notify ) > 0 %then %do;
-
-    %if &SYSSCP = WIN %then %do;
-      %Warn_mput( macro=Update_metadata_file, msg=Email notification (UPDATE_NOTIFY=) is only available in Alpha environment. )
-    %end;
-    %else %do;
-      %let i = 1;
-      %let em = %scan( &update_notify, &i, %str( ) );
-      %do %until ( &em = );
-        %note_mput( macro=Update_metadata_file, msg=Email notification being sent to &em.. )
-        X mail /subject="Metadata for &ds_lib..&ds_name updated by &creator" nl: "&em";
-        %let i = %eval( &i + 1 );
-        %let em = %scan( &update_notify, &i, %str( ) );
-      %end;
-    %end;
-  
-  %end;
-  
-  ********************************/
-  
 
   %***** ***** ***** CLEAN UP ***** ***** *****;
 
@@ -757,7 +757,14 @@
 ** Autocall macros **;
 
 filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
-options sasautos=(uiautos sasautos);
+options sasautos=(uiautos sasautos) noxwait;
+
+** Set up and clear test folder **;
+
+x "md d:\temp\Update_metadata_file_test";
+x "del /q d:\temp\Update_metadata_file_test\*.*";
+
+libname test "d:\temp\Update_metadata_file_test\";
 
 proc format library=work;
   value $region
@@ -772,47 +779,104 @@ proc format library=work;
     "United States" = "~United States"
     "Western Europe" = "~Western Europe";
     
-data Shoes;
+data Test.Shoes;
 
   set Sashelp.shoes;
   
+  dvar = date();
+  dtvar = datetime();
+  tvar = time();
+  
+  label 
+    dvar = "Date testing variable"
+    dtvar = "Datetime testing variable"
+    tvar = "Time testing variable";
+  
   format region $region.;
+  format dvar mmddyy10. dtvar datetime. tvar time.;
   
 run;
 
-%File_info( data=shoes, freqvars=region )
+data Test.Shoes_nonum (label="Shoes data set without numeric vars");
+
+  set Test.shoes;
+  
+  keep _character_;
+  
+run;
+
+data Test.Shoes_empty (label="Shoes data set with no observations");
+
+  set Test.shoes (obs=0);
+  
+run;
+
+%File_info( data=Test.shoes, freqvars=region )
+%File_info( data=Test.shoes_nonum, stats= )
+%File_info( data=Test.shoes_empty, stats= )
+
+
+** Testing for reporting error when trying to register a data set to an unregistered library **;
 
 %Update_metadata_file( 
-         ds_lib=Work,
+         ds_lib=Test,
          ds_name=Shoes,
          creator=SAS Institute,
          creator_process=SAS Institute,
          revisions=Test file.,
-         meta_lib=work
+         meta_lib=Test
       )
+
+** Register library **;
 
 %Update_metadata_library( 
-         lib_name=Work,
+         lib_name=Test,
          lib_desc=Test library,
-         meta_lib=work
+         meta_lib=Test
       )
 
+** Register data set **;
+
 %Update_metadata_file( 
-         ds_lib=Work,
+         ds_lib=Test,
          ds_name=Shoes,
          creator=SAS Institute,
          creator_process=SAS Institute,
          revisions=Test file.,
-         meta_lib=work,
+         meta_lib=Test,
          mprint=y
       )
 
-proc datasets library=work memtype=(data);
+** Test data set without numeric variables **;
+
+%Update_metadata_file( 
+         ds_lib=Test,
+         ds_name=Shoes_nonum,
+         creator=SAS Institute,
+         creator_process=SAS Institute,
+         revisions=Test file.,
+         meta_lib=Test,
+         mprint=y
+      )
+
+** Test data set with no observations **;
+
+%Update_metadata_file( 
+         ds_lib=Test,
+         ds_name=Shoes_empty,
+         creator=SAS Institute,
+         creator_process=SAS Institute,
+         revisions=Test file.,
+         meta_lib=Test,
+         mprint=y
+      )
+
+proc datasets library=Test memtype=(data);
 quit;
 
-%File_info( data=Meta_files, printobs=50, contents=n, stats= )
-%File_info( data=Meta_vars, printobs=50, contents=n, stats= )
-%File_info( data=Meta_fval, printobs=50, contents=n, stats= )
-%File_info( data=Meta_history, printobs=50, contents=n, stats= )
+%File_info( data=Test.Meta_files, printobs=50, contents=n, stats= )
+%File_info( data=Test.Meta_vars, printobs=50, contents=n, stats= )
+%File_info( data=Test.Meta_fval, printobs=50, contents=n, stats= )
+%File_info( data=Test.Meta_history, printobs=50, contents=n, stats= )
 
 /**********************************************************************/
