@@ -374,7 +374,7 @@
     
     VarNameUC = upcase( name );
     
-    if format ~= "" and 
+    if format ~= "" and &num_obs > 0 and 
        not index( %upcase(&exclude_fmts||&add_exclude_fmts), compress( "/" || format || "/" ) )
        then
          ListFmtVals = 1;
@@ -807,16 +807,21 @@ data Test.Shoes;
 
   set Sashelp.shoes;
   
+  dvar = date();
   dtvar = datetime();
+  tvar = time();
   
-  label dtvar = "Datetime testing variable";
+  label 
+    dvar = "Date testing variable"
+    dtvar = "Datetime testing variable"
+    tvar = "Time testing variable";
   
   format region $region.;
-  format dtvar datetime.;
+  format dvar mmddyy10. dtvar datetime. tvar time.;
   
 run;
 
-data Test.Shoes_nonum;
+data Test.Shoes_nonum (label="Shoes data set without numeric vars");
 
   set Test.shoes;
   
@@ -824,7 +829,7 @@ data Test.Shoes_nonum;
   
 run;
 
-data Test.Shoes_empty;
+data Test.Shoes_empty (label="Shoes data set with no observations");
 
   set Test.shoes (obs=0);
   

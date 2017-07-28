@@ -104,7 +104,7 @@
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %local html_doctype date_fmts cur_dt_raw cur_tm_raw cur_dt cur_tm i em;
+  %local html_doctype date_fmts datetime_fmts time_fmts cur_dt_raw cur_tm_raw cur_dt cur_tm i em;
   
   %Note_mput( macro=Create_metadata_html, msg=Macro (version 10/21/11) starting. )
   
@@ -115,17 +115,17 @@
   %** Date formats (updated for SAS 9.2) **;
 
   %let date_fmts =
-    "/DATE/DATEAMPM/DATETIME/DAY/DDMMYY/" ||
+    "/DATE/DAY/DDMMYY/" ||
     "/DDMMYYB/DDMMYYC/DDMMYYD/DDMMYYN/DDMMYYP/DDMMYYS/" ||
-    "/DOWNAME/DTDATE/DTMONYY/DTWKDATX/DTYEAR/DTYYQC/" ||
-    "/EURDFDD/EURDFDE/EURDFDN/EURDFDT/EURDFDWN/EURDFMN/EURDFMY/EURDFWDX/EURDFWKX/" ||
-    "/HDATE/HEBDATE/HHMM/HOUR/JULDAY/JULIAN/MINGUO/MMDDYY/" ||
+    "/DOWNAME/" ||
+    "/EURDFDD/EURDFDE/EURDFDN/EURDFDWN/EURDFMN/EURDFMY/EURDFWDX/EURDFWKX/" ||
+    "/HDATE/HEBDATE/JULDAY/JULIAN/MINGUO/MMDDYY/" ||
     "/MMDDYYB/MMDDYYC/MMDDYYD/MMDDYYN/MMDDYYP/MMDDYYS/" ||
-    "/MMSS/MMYY/" ||
+    "/MMYY/" ||
     "/MMYYC/MMYYD/MMYYN/MMYYP/MMYYS/" ||
-    "/MONNAME/MONTH/MONYY/NENGO/NLDATE/NLDATEMN/NLDATEW/NLDATEWN/NLDATM/NLDATMAP/" ||
-    "/NLDATMTM/NLDATMW/NLTIMAP/NLTIME/PDJULG/PDJULI/QTR/QTRR/TIME/TIMEAMPM/" ||
-    "/TOD/WEEKDATE/WEEKDATX/WEEKDAY/WEEKU/WEEKV/WEEKW/WORDDATE/WORDDATX/YEAR/YYMM/" ||
+    "/MONNAME/MONTH/MONYY/NENGO/NLDATE/NLDATEMN/NLDATEW/NLDATEWN/" ||
+    "/NLTIMAP/NLTIME/PDJULG/PDJULI/QTR/QTRR/" ||
+    "/WEEKDATE/WEEKDATX/WEEKDAY/WEEKU/WEEKV/WEEKW/WORDDATE/WORDDATX/YEAR/YYMM/" ||
     "/YYMMC/YYMMD/YYMMN/YYMMP/YYMMS/" ||
     "/YYMMDD/" ||
     "/YYMMDDB/YYMMDDC/YYMMDDD/YYMMDDN/YYMMDDP/YYMMDDS/" ||
@@ -133,6 +133,12 @@
     "/YYQC/YYQD/YYQN/YYQP/YYQS/" ||
     "/YYQR/" ||
     "/YYQRC/YYQRD/YYQRN/YYQRP/YYQRS/";
+
+  %let datetime_fmts =
+    "/DATETIME/DATEAMPM/DTDATE/DTMONYY/DTWKDATX/DTYEAR/DTYYQC/EURDFDT/NLDATM/NLDATMAP/NLDATMTM/NLDATMW/";
+    
+  %let time_fmts = 
+    "/HHMM/HOUR/MMSS/TIME/TIMEAMPM/TOD/";
 
   %** Get current date & time for stamping HTML pages **;
   
@@ -838,6 +844,22 @@
       else
         IsDateVal = 0;
 
+    ** Determine if datetime value **;
+    
+    if VarFmt ~= "" and index( %upcase(&datetime_fmts), compress( "/" || VarFmt || "/" ) )
+      then
+        IsDatetimeVal = 1;
+      else
+        IsDatetimeVal = 0;
+
+    ** Determine if time value **;
+    
+    if VarFmt ~= "" and index( %upcase(&time_fmts), compress( "/" || VarFmt || "/" ) )
+      then
+        IsTimeVal = 1;
+      else
+        IsTimeVal = 0;
+
     ** Variable name & description **;
     
     if first.VarNameUC then do;
@@ -847,6 +869,12 @@
       if IsDateVal then
         link = "<td align=""left"" valign=""top"" colspan=""6""><a name=""" || trim( VarName ) || """><b>" || 
                trim( VarName ) || "</b> - " || trim( VarDesc ) || " [SAS date value]</a></td>";
+      else if IsDatetimeVal then
+        link = "<td align=""left"" valign=""top"" colspan=""6""><a name=""" || trim( VarName ) || """><b>" || 
+               trim( VarName ) || "</b> - " || trim( VarDesc ) || " [SAS datetime value]</a></td>";
+      else if IsTimeVal then
+        link = "<td align=""left"" valign=""top"" colspan=""6""><a name=""" || trim( VarName ) || """><b>" || 
+               trim( VarName ) || "</b> - " || trim( VarDesc ) || " [SAS time value]</a></td>";
       else
         link = "<td align=""left"" valign=""top"" colspan=""6""><a name=""" || trim( VarName ) || """><b>" || 
                trim( VarName ) || "</b> - " || trim( VarDesc ) || "</a></td>";
@@ -887,6 +915,52 @@
         put "<td align=""right""><small>" _desc_std best8. "</small></td>";
         put "<td align=""right""><small>" _desc_min mmddyy10. "</small></td>";
         put "<td align=""right""><small>" _desc_max mmddyy10. "</small></td>";
+        put '<td align="right"><small>&nbsp;</small></td>';
+        put "</tr>";      
+
+      end;
+      else if IsDatetimeVal then do;
+
+        put "<tr>";
+        put '<td align="right" width="5%"><small>&nbsp;</small></td>';
+        put "<td align=""right"" width=""15%""><small><i>N</i></small></td>";
+        put "<td align=""right"" width=""15%""><small><i>Mean</i></small></td>";
+        put "<td align=""right"" width=""15%""><small><i>StdDev (seconds)</i></small></td>";
+        put "<td align=""right"" width=""15%""><small><i>Min</i></small></td>";
+        put "<td align=""right"" width=""15%""><small><i>Max</i></small></td>";
+        put '<td align="right"><small>&nbsp;</small></td>';
+        put "</tr>";
+        
+        put "<tr>";
+        put '<td align="right"><small>&nbsp;</small></td>';
+        put "<td align=""right""><small>" _desc_n comma16. "</small></td>";
+        put "<td align=""right""><small>" _desc_mean datetime. "</small></td>";
+        put "<td align=""right""><small>" _desc_std best8. "</small></td>";
+        put "<td align=""right""><small>" _desc_min datetime. "</small></td>";
+        put "<td align=""right""><small>" _desc_max datetime. "</small></td>";
+        put '<td align="right"><small>&nbsp;</small></td>';
+        put "</tr>";      
+
+      end;
+      else if IsTimeVal then do;
+
+        put "<tr>";
+        put '<td align="right" width="5%"><small>&nbsp;</small></td>';
+        put "<td align=""right"" width=""15%""><small><i>N</i></small></td>";
+        put "<td align=""right"" width=""15%""><small><i>Mean</i></small></td>";
+        put "<td align=""right"" width=""15%""><small><i>StdDev (seconds)</i></small></td>";
+        put "<td align=""right"" width=""15%""><small><i>Min</i></small></td>";
+        put "<td align=""right"" width=""15%""><small><i>Max</i></small></td>";
+        put '<td align="right"><small>&nbsp;</small></td>';
+        put "</tr>";
+        
+        put "<tr>";
+        put '<td align="right"><small>&nbsp;</small></td>';
+        put "<td align=""right""><small>" _desc_n comma16. "</small></td>";
+        put "<td align=""right""><small>" _desc_mean time. "</small></td>";
+        put "<td align=""right""><small>" _desc_std best8. "</small></td>";
+        put "<td align=""right""><small>" _desc_min time. "</small></td>";
+        put "<td align=""right""><small>" _desc_max time. "</small></td>";
         put '<td align="right"><small>&nbsp;</small></td>';
         put "</tr>";      
 
@@ -1458,3 +1532,32 @@
 %mend Create_metadata_html;
 
 
+/************************ UNCOMMENT TO TEST ***************************/
+
+** NOTE: Requires running testing code for %Update_metadata_file() first
+**       to create metadata files.
+**;
+
+** Autocall macros **;
+
+filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
+options sasautos=(uiautos sasautos) noxwait;
+
+** Test folder **;
+
+libname test "d:\temp\Update_metadata_file_test\";
+
+%Create_metadata_html( 
+         meta_lib= test,
+         meta_pre= meta,
+         meta_title= Test of Metadata System,
+         update_months= 12,
+         creator_fmt=,
+         html_folder= d:\temp\Update_metadata_file_test\,
+         html_pre= meta,
+         html_suf= html,
+         html_title= Test Metadata -,
+         html_stylesht= 
+       )
+
+/**********************************************************************/
