@@ -99,6 +99,7 @@
                  latest dates before). 
    10/21/11  PAT Added macro starting and ending messages to LOG. 
    03/30/14  PAT Added Creator process (FileProcess) to file history pages.
+   07/28/17  PAT Added support for datetime and time vars.
 
   *********************************************************************/
 
@@ -106,7 +107,7 @@
    
   %local html_doctype date_fmts datetime_fmts time_fmts cur_dt_raw cur_tm_raw cur_dt cur_tm i em;
   
-  %Note_mput( macro=Create_metadata_html, msg=Macro (version 10/21/11) starting. )
+  %Note_mput( macro=Create_metadata_html, msg=Macro (version 7/28/17) starting. )
   
   %** HTML document type declaration **;
   
@@ -453,10 +454,7 @@
                 "_" || trim( lowcase( FileName ) ) || ".&html_suf";
   
   run;
-  
-  *proc print data=&meta_pre._vars;
-  *  title2 "File = &meta_pre._vars";
-    
+
   
   ** Create data set pages **;
   
@@ -489,7 +487,6 @@
               "library=" || trim(library) || " filename=" || trim(filename) ||
               """ nl: ""&em""";
             rc = system( sys_cmd );
-            /***X mail /subject="CREATE_METADATA_HTML() error: No matching variable record for file" nl: "&em";***/
             %let i = %eval( &i + 1 );
             %let em = %scan( &error_notify, &i, %str( ) );
           %end;
@@ -548,7 +545,6 @@
       
       put "<table border=""0"" width=""100%"" cellspacing=""0"" cellpadding=""4"">" /;
       
-      *link = "&html_pre._files.&html_suf#" || trim( lowcase( library ) );
       link = "&html_pre._" || trim( lowcase( library ) ) || ".&html_suf" ;
     
       put "<tr>";
@@ -597,7 +593,6 @@
 
       put "<tr>";
       put "<th align=""left"" valign=""top"">Creator:</th>";
-      *put "<td align=""left"" valign=""top"">" FileCreator "</td>";
       put "<td align=""left"" valign=""top"">" link "</td>";
       put "</tr>";
 
@@ -833,8 +828,6 @@
     end;
     
     VarName = lowcase( VarName );
-    
-    *link = "&html_pre._" || trim( FileName ) || ".&html_suf";
     
     ** Determine if date value **;
     
@@ -1532,7 +1525,7 @@
 %mend Create_metadata_html;
 
 
-/************************ UNCOMMENT TO TEST ***************************/
+/************************ UNCOMMENT TO TEST ***************************
 
 ** NOTE: Requires running testing code for %Update_metadata_file() first
 **       to create metadata files.

@@ -111,10 +111,10 @@
    11/09/13  PAT Revised for use with new SAS server setup.
                  Added ds_lib_display=.
                  Removed update_notify= functionality.
+   07/28/17  PAT Will now properly register empty data sets or
+                 data sets without numeric variables. 
+                 Added support for datetime and time vars.
 
-   Next steps:
-    - Handle situation where file has no numeric unformatted vars
-  
   *********************************************************************/
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
@@ -719,30 +719,6 @@
     
   %end;
   
-  /****** FUNCTION DISABLED ******
-    
-  ** Notify by email of metadata update **;
-  
-  %if %length( &update_notify ) > 0 %then %do;
-
-    %if &SYSSCP = WIN %then %do;
-      %Warn_mput( macro=Update_metadata_file, msg=Email notification (UPDATE_NOTIFY=) is only available in Alpha environment. )
-    %end;
-    %else %do;
-      %let i = 1;
-      %let em = %scan( &update_notify, &i, %str( ) );
-      %do %until ( &em = );
-        %note_mput( macro=Update_metadata_file, msg=Email notification being sent to &em.. )
-        X mail /subject="Metadata for &ds_lib..&ds_name updated by &creator" nl: "&em";
-        %let i = %eval( &i + 1 );
-        %let em = %scan( &update_notify, &i, %str( ) );
-      %end;
-    %end;
-  
-  %end;
-  
-  ********************************/
-  
 
   %***** ***** ***** CLEAN UP ***** ***** *****;
 
@@ -776,7 +752,7 @@
 
 
 
-/************************ UNCOMMENT TO TEST ***************************/
+/************************ UNCOMMENT TO TEST ***************************
 
 ** Autocall macros **;
 
@@ -839,7 +815,7 @@ run;
 %File_info( data=Test.shoes_nonum, stats= )
 %File_info( data=Test.shoes_empty, stats= )
 
-/*
+
 ** Testing for reporting error when trying to register a data set to an unregistered library **;
 
 %Update_metadata_file( 
@@ -850,7 +826,6 @@ run;
          revisions=Test file.,
          meta_lib=Test
       )
-*/
 
 ** Register library **;
 
