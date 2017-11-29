@@ -80,6 +80,7 @@
    07/01/14  RP Updated 2014 to half year
    01/11/16  PT Updated 2014 to ANNUAL; 2015 to HALF1. 
    09/01/16  LH Updated 2015 to ANNUAL; 2016 to HALF1. 
+   11/29/17  PT Updated 2016 to ANNUAL; 2017 to HALF1.
 
   *********************************************************************/
 
@@ -94,12 +95,12 @@
     CPI_1997 CPI_1998 CPI_1999 CPI_2000 CPI_2001 CPI_2002
     CPI_2003 CPI_2004 CPI_2005 CPI_2006 CPI_2007 CPI_2008
     CPI_2009 CPI_2010 CPI_2011 CPI_2012 CPI_2013 CPI_2014
-    CPI_2015 CPI_2016;
+    CPI_2015 CPI_2016 CPI_2017;
 
   %global _dcnv_count;
 
   %let MIN_YEAR = 1979;
-  %let MAX_YEAR = 2016;
+  %let MAX_YEAR = 2017;
 
   %let series = %upcase( &series );
 
@@ -149,7 +150,8 @@
 	%let CPI_2013 = 232.957;  %** Full year 2013 **;
 	%let CPI_2014 = 236.736;  %** ANNUAL 2014 **;
 	%let CPI_2015 = 237.017;  %** ANNUAL 2015 **;
-	%let CPI_2016 = 238.782;  %** Half1 2016 **;
+	%let CPI_2016 = 240.007;  %** Annual 2016 **;
+	%let CPI_2017 = 244.076;  %** Half1 2017 **;
   %end;
   %else %if &series = CUUR0000SA0L2 %then %do;
     %************************************************** 
@@ -197,7 +199,8 @@
 	%let CPI_2013 = 223.820;  %** Full year 2013 **;
 	%let CPI_2014 = 226.192;  %** ANNUAL 2014 **;
 	%let CPI_2015 = 223.313;  %** ANNUAL 2015 **;
-	%let CPI_2016 = 223.092;  %** HALF1 2016 **;
+	%let CPI_2016 = 223.807;  %** Annual 2016 **;
+	%let CPI_2017 = 226.695;  %** Half1 2017 **;
   %end;
   %else %do;
     %err_mput( macro=Dollar_convert, msg=Invalid SERIES= value: &series )
@@ -312,6 +315,8 @@ data _null_;
 
   %dollar_convert( amount, amount2, from, to, quiet=N, series=CUUR0000SA0L2 );
   put amount2= amount= from= to=;
+  
+  ** LAST ENTRY IS MEANT TO PRODUCE AN ERROR **; 
 
 cards;
 100 1980 2012
@@ -320,7 +325,7 @@ cards;
 100 1995 2012
 100 2000 2012
 100 2012 1995
-100 1995 2020
+100 1995 2030
 ;
   
 run;
