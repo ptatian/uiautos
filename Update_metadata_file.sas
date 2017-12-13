@@ -216,12 +216,12 @@
     ** Check for numeric variables **;
   
     proc sql noprint;
-      select name into :num_vars separated by ' '
+      select count( name ) into :num_vars
       from dictionary.columns
       where upcase(libname)="%upcase(&ds_lib)" and upcase(memname)="%upcase(&ds_name)" and upcase(type) = "NUM";
     quit;
     
-    %if %length( &num_vars ) > 0 and &num_obs > 0 %then %do;
+    %if &num_vars > 0 and &num_obs > 0 %then %do;
     
       ** Get descriptive statistics for numeric variables **;
    
@@ -257,7 +257,7 @@
 
   data _info_&ds_name25;
   
-    %if %length( &desc_stats ) > 0 and %length( &num_vars ) > 0  and &num_obs > 0 %then %do;
+    %if %length( &desc_stats ) > 0 and &num_vars > 0  and &num_obs > 0 %then %do;
 
       merge _cnts_&ds_name25 &_compile_num_desc_out (rename=(_name_=name));
       by name;
@@ -306,7 +306,7 @@
     _v_&ds_name25
       (keep=libname_display memname varnum name VarNameUC label VarType length format
             ListFmtVals
-              %if %length( &desc_stats ) > 0 and %length( &num_vars ) > 0 and &num_obs > 0 %then %do;
+              %if %length( &desc_stats ) > 0 and &num_vars > 0 and &num_obs > 0 %then %do;
                 _desc_:
               %end;
        rename=(libname_display=Library memname=FileName varnum=VarOrder name=VarName label=VarDesc
@@ -842,7 +842,7 @@ run;
          ds_name=Shoes,
          creator=SAS Institute,
          creator_process=SAS Institute,
-         revisions=Test file.,
+         revisions=Test file SHOES.,
          meta_lib=Test,
          mprint=y
       )
@@ -854,7 +854,7 @@ run;
          ds_name=Shoes_nonum,
          creator=SAS Institute,
          creator_process=SAS Institute,
-         revisions=Test file.,
+         revisions=Test file SHOES_NONUM.,
          meta_lib=Test,
          mprint=y
       )
@@ -866,7 +866,7 @@ run;
          ds_name=Shoes_empty,
          creator=SAS Institute,
          creator_process=SAS Institute,
-         revisions=Test file.,
+         revisions=Test file SHOES_EMPTY.,
          meta_lib=Test,
          mprint=y
       )
