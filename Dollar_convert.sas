@@ -81,6 +81,7 @@
    01/11/16  PT Updated 2014 to ANNUAL; 2015 to HALF1. 
    09/01/16  LH Updated 2015 to ANNUAL; 2016 to HALF1. 
    11/29/17  PT Updated 2016 to ANNUAL; 2017 to HALF1.
+   06/28/18  LH Updated 2017 to ANNUAL; 2018 to average of Jan-Mar.
 
   *********************************************************************/
 
