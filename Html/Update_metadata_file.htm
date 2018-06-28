@@ -1,7 +1,7 @@
 <!doctype html public "-//w3c//dtd html 4.0 final//en">
 <html>
    <head>
-      <title>K:\Metro\PTatian\UISUG\Uiautos\Update_metadata_file.sas</title>
+      <title>Update_metadata_file.sas</title>
    </head>
    <body>
       <pre>
@@ -223,12 +223,12 @@
     ** Check for numeric variables **;
   
     proc sql noprint;
-      select name into :num_vars separated by ' '
+      select count( name ) into :num_vars
       from dictionary.columns
       where upcase(libname)="%upcase(&amp;ds_lib)" and upcase(memname)="%upcase(&amp;ds_name)" and upcase(type) = "NUM";
     quit;
     
-    %if %length( &amp;num_vars ) &gt; 0 and &amp;num_obs &gt; 0 %then %do;
+    %if &amp;num_vars &gt; 0 and &amp;num_obs &gt; 0 %then %do;
     
       ** Get descriptive statistics for numeric variables **;
    
@@ -264,7 +264,7 @@
 
   data _info_&amp;ds_name25;
   
-    %if %length( &amp;desc_stats ) &gt; 0 and %length( &amp;num_vars ) &gt; 0  and &amp;num_obs &gt; 0 %then %do;
+    %if %length( &amp;desc_stats ) &gt; 0 and &amp;num_vars &gt; 0  and &amp;num_obs &gt; 0 %then %do;
 
       merge _cnts_&amp;ds_name25 &amp;_compile_num_desc_out (rename=(_name_=name));
       by name;
@@ -313,7 +313,7 @@
     _v_&amp;ds_name25
       (keep=libname_display memname varnum name VarNameUC label VarType length format
             ListFmtVals
-              %if %length( &amp;desc_stats ) &gt; 0 and %length( &amp;num_vars ) &gt; 0 and &amp;num_obs &gt; 0 %then %do;
+              %if %length( &amp;desc_stats ) &gt; 0 and &amp;num_vars &gt; 0 and &amp;num_obs &gt; 0 %then %do;
                 _desc_:
               %end;
        rename=(libname_display=Library memname=FileName varnum=VarOrder name=VarName label=VarDesc
@@ -849,7 +849,7 @@ run;
          ds_name=Shoes,
          creator=SAS Institute,
          creator_process=SAS Institute,
-         revisions=Test file.,
+         revisions=Test file SHOES.,
          meta_lib=Test,
          mprint=y
       )
@@ -861,7 +861,7 @@ run;
          ds_name=Shoes_nonum,
          creator=SAS Institute,
          creator_process=SAS Institute,
-         revisions=Test file.,
+         revisions=Test file SHOES_NONUM.,
          meta_lib=Test,
          mprint=y
       )
@@ -873,7 +873,7 @@ run;
          ds_name=Shoes_empty,
          creator=SAS Institute,
          creator_process=SAS Institute,
-         revisions=Test file.,
+         revisions=Test file SHOES_EMPTY.,
          meta_lib=Test,
          mprint=y
       )

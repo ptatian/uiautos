@@ -81,6 +81,7 @@
    01/11/16  PT Updated 2014 to ANNUAL; 2015 to HALF1. 
    09/01/16  LH Updated 2015 to ANNUAL; 2016 to HALF1. 
    11/29/17  PT Updated 2016 to ANNUAL; 2017 to HALF1.
+   06/28/18  LH Updated 2017 to ANNUAL; 2018 to average of Jan-Mar.
 
   *********************************************************************/
 
@@ -95,12 +96,12 @@
     CPI_1997 CPI_1998 CPI_1999 CPI_2000 CPI_2001 CPI_2002
     CPI_2003 CPI_2004 CPI_2005 CPI_2006 CPI_2007 CPI_2008
     CPI_2009 CPI_2010 CPI_2011 CPI_2012 CPI_2013 CPI_2014
-    CPI_2015 CPI_2016 CPI_2017;
+    CPI_2015 CPI_2016 CPI_2017 CPI_2018;
 
   %global _dcnv_count;
 
   %let MIN_YEAR = 1979;
-  %let MAX_YEAR = 2017;
+  %let MAX_YEAR = 2018;
 
   %let series = %upcase( &series );
 
@@ -151,7 +152,8 @@
 	%let CPI_2014 = 236.736;  %** ANNUAL 2014 **;
 	%let CPI_2015 = 237.017;  %** ANNUAL 2015 **;
 	%let CPI_2016 = 240.007;  %** Annual 2016 **;
-	%let CPI_2017 = 244.076;  %** Half1 2017 **;
+	%let CPI_2017 = 245.120;  %** Annual 2017 **;
+	%let CPI_2018 = 248.804;  %** first 3 month average; 
   %end;
   %else %if &series = CUUR0000SA0L2 %then %do;
     %************************************************** 
@@ -200,7 +202,8 @@
 	%let CPI_2014 = 226.192;  %** ANNUAL 2014 **;
 	%let CPI_2015 = 223.313;  %** ANNUAL 2015 **;
 	%let CPI_2016 = 223.807;  %** Annual 2016 **;
-	%let CPI_2017 = 226.695;  %** Half1 2017 **;
+	%let CPI_2017 = 227.241;  %** Annual 2017 **;
+	%let CPI_2018 = 230.043;  %** first 3 month average; 
   %end;
   %else %do;
     %err_mput( macro=Dollar_convert, msg=Invalid SERIES= value: &series )
@@ -265,12 +268,12 @@
 
 /************************ UNCOMMENT TO TEST ***************************
 
-filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
+filename uiautos "D:\Projects\UISUG\Uiautos";
 options sasautos=(uiautos sasautos);
 options mprint nosymbolgen nomlogic;
 options msglevel=i;
 
-%let last_year = 2015;
+%let last_year = 2018;
 
 %let i = 12345;
 %let _i = 67890;
@@ -333,7 +336,9 @@ run;
 ** Create new variables test **;
 
 data input;
+
   input amount;
+
 cards;
 100
 105
@@ -343,12 +348,15 @@ cards;
 125
 130
 ;
+
 run;
 
 data test;
+
 	set input;
 	%dollar_convert( amount, year2000 , 1980, 2000, quiet=N, series=CUUR0000SA0L2 )
 	%dollar_convert( amount, year2010 , 1980, 2010, quiet=N, series=CUUR0000SA0L2 )
+
 run;
 
 proc print data=test; run;
