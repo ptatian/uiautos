@@ -143,6 +143,8 @@ Author: Quentin McMullen
 History: Created 2/11/2004
 Notes: html tags taken from Ed Heaton SAS-L post 3/29/2004
 **********************************************************************/
+%local file_nopath;
+%let file_nopath = %scan( &file, -1, \/ );
 data _null_;
 infile "&file" end=eof;
 file "&out";
@@ -150,7 +152,7 @@ if ( _n_ eq 1 ) then put
 @01 '<!doctype html public "-//w3c//dtd html 4.0 final//en">'
 / @01 "<html>"
 / @04 "<head>"
-/ @07 "<title>&file</title>"
+/ @07 "<title>&file_nopath</title>"
 / @04 "</head>"
 / @04 "<body>"
 / @07 "<pre>"
