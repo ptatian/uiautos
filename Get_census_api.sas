@@ -1,6 +1,6 @@
 /******************* URBAN INSTITUTE MACRO LIBRARY *********************
  
- Macro: Read_census_api
+ Macro: Get_census_api
 
  Description: Read Census data through a JSON API service into a 
  SAS data set. Requires SAS 9.4M4 or later.
@@ -11,7 +11,7 @@
  
 ***********************************************************************/
 
-%macro Read_census_api( 
+%macro Get_census_api( 
   api=,      /** API path (quoted character string) **/
   out=       /** Output data set (optional) **/
 );
@@ -19,7 +19,7 @@
   /*************************** USAGE NOTES *****************************
    
    SAMPLE CALL: 
-     %Read_census_api( 
+     %Get_census_api( 
        api='https://api.census.gov/data/2017/acs/acs5?get=B01001_001E,NAME&for=tract:*&in=state:01&in=county:*',
        out=alabama_tracts
      )
@@ -37,13 +37,13 @@
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %note_mput( macro=Read_census_api, msg=Macro starting. )
+  %note_mput( macro=Get_census_api, msg=Macro starting. )
   
     
   %***** ***** ***** ERROR CHECKS ***** ***** *****;
 
   %if %length( &api ) = 0 %then %do;
-    %err_mput( macro=Read_census_api, msg=Must provide an API= value. )
+    %err_mput( macro=Get_census_api, msg=Must provide an API= value. )
     %goto exit;
   %end;
 
@@ -87,10 +87,10 @@
 
   %exit:
 
-  %note_mput( macro=Read_census_api, msg=Macro exiting. )  
+  %note_mput( macro=Get_census_api, msg=Macro exiting. )  
   
 
-%mend Read_census_api;
+%mend Get_census_api;
 
 
 /************************ UNCOMMENT TO TEST ***************************
@@ -103,10 +103,10 @@
   options mprint nosymbolgen nomlogic;
 
   ** Check error handling **;
-  %Read_census_api( )
+  %Get_census_api( )
 
   ** Check reading API: all 2017 5-year Alabama tract populations **;
-  %Read_census_api( 
+  %Get_census_api( 
     api='https://api.census.gov/data/2017/acs/acs5?get=B01001_001E,NAME&for=tract:*&in=state:01&in=county:*',
     out=alabama_tracts
   )
