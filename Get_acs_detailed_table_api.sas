@@ -29,12 +29,11 @@
       year=2017, 
       sample=acs1, 
       for=county:*, 
-      in=%nrstr(state:1&in=county:*)
+      in=%nrstr(state:24)
     )
 
-       Reads Census API for ACS 1-year 2017 county data for 
-       summary table B01001 for all counties in Alabama to 
-       SAS data set work.B01001.
+       Reads summary table B01001, 2017 1-year data, all counties in MD,
+       to SAS data set work.B01001.
 
   *********************************************************************/
 
@@ -236,8 +235,13 @@
   ** Check error handling **;
   %Get_acs_detailed_table_api( )
 
-  ** Check reading API: all 2017 5-year Alabama tract populations **;
-  %Get_acs_detailed_table_api( table=B01001, year=2017, sample=acs1, for=county:*, in=%nrstr(state:11&in=county:*), key=32fb30e46892b2858b58fb5531cb53bf51c90cdf )
+  ** Check reading API: Summary table B01001, 2017 1-year data, all counties in MD **;
+  %Get_acs_detailed_table_api( table=B01001, year=2017, sample=acs1, for=county:*, in=state:24, key=32fb30e46892b2858b58fb5531cb53bf51c90cdf )
+
+  %File_info( data=B01001, printobs=0 )
+
+  ** Check reading API: Summary table B01001, 2017 5-year data, all tracts in DC **;
+  %Get_acs_detailed_table_api( table=B01001, year=2017, sample=acs5, for=tract:*, in=%nrstr(state:11&in=county:*), key=32fb30e46892b2858b58fb5531cb53bf51c90cdf )
 
   %File_info( data=B01001, printobs=0 )
 
