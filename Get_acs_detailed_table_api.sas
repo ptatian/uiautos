@@ -13,12 +13,14 @@
 ***********************************************************************/
 
 %macro Get_acs_detailed_table_api( 
-  table=, 
-  year=, 
-  sample=, 
-  for=, 
-  in=, 
-  key=
+  table=,      /** ACS detailed summary table ID **/
+  year=,       /** 4-digit ACS data year (last year for 5-year data) **/
+  sample=,     /** ACS1 (1-year) or ACS5 (5-year) data samples **/
+  for=,        /** Geographic level specification (eg, tract:*) **/
+  in=,         /** Selection criteria (eg, state:24) **/
+  add_vars=,   /** Additional variables to include in data set (optional) **/
+  out=,        /** Output data set (optional, default is table ID) **/
+  key=         /** Census API key (optional) **/
 );
 
   /*************************** USAGE NOTES *****************************
@@ -48,19 +50,24 @@
   %note_mput( macro=Get_acs_detailed_table_api, msg=Macro starting. )
   
   %local 
-    for_keyword geo_vars tablefiles i j n orig_vars vars_sub file_list api_url
-    orig_estimate orig_moe estimate_labels moe_labels estimate_convert moe_convert;
+    for_keyword geo_vars tablefiles i j n full_vars orig_vars vars_sub 
+    file_list api_url out_label
+    orig_estimate orig_moe estimate_labels moe_labels 
+    estimate_convert moe_convert;
 
   %let table = %upcase( &table );
   %let for = %lowcase( &for );
+  %let add_vars = %upcase( &add_vars );
 
   %let for_keyword = %scan( &for, 1, : );
+  
+  %if %length( &out ) = 0 %then %let out = &table;
 
     
   %***** ***** ***** ERROR CHECKS ***** ***** *****;
 
   %if %length( &table ) = 0 %then %do;
-    %err_mput( macro=Get_acs_detailed_table_api, msg=Must provide an TABLE= value. )
+    %err_mput( macro=Get_acs_detailed_table_api, msg=Must provide a TABLE= value (summary table ID). )
     %goto exit;
   %end;
 
@@ -77,15 +84,12 @@
   /*%File_info( data=IN.VARIABLES_B01001_001E )*/
 
   proc sql noprint;
-    /***describe table dictionary.tables;***/
     select 'IN.' || left( memname ) into :tablefiles separated by ' ' from dictionary.tables
-    /***select substr( memname, length( 'VARIABLES_' ) + 1 ) into :vars separated by ',' from dictionary.tables***/
-    /***select libname, memname from dictionary.tables***/
     where libname='IN' and memname like "VARIABLES\_&table.\_%" escape '\'
     order by memname;
   quit;
 
-  data tableinfo;
+  data _tableinfo;
 
     length label estimate_label moe_label $ 250;
     length rootvar table orig_estimate orig_moe estimate moe $ 40;
@@ -116,20 +120,21 @@
     
   run;
 
-  PROC PRINT;
+  ***PROC PRINT;
 
   /**proc contents data=in._all_; run;***/
 
   proc sql noprint;
-    select orig_estimate into :orig_estimate separated by ' ' from tableinfo;
-    select orig_moe into :orig_moe separated by ' ' from tableinfo;
-    select trim(estimate)||'="'||trim(estimate_label)||'"' into :estimate_labels separated by '0d0a'x from tableinfo;
-    select trim(moe)||'="'||trim(moe_label)||'"' into :moe_labels separated by '0d0a'x from tableinfo;
-    select trim(estimate)||'=input('||trim(orig_estimate)||',best32.);' into :estimate_convert separated by '0d0a'x from tableinfo;
-    select trim(moe)||'=input('||trim(orig_moe)||',best32.);' into :moe_convert separated by '0d0a'x from tableinfo;
+    select orig_estimate into :orig_estimate separated by ' ' from _tableinfo;
+    select orig_moe into :orig_moe separated by ' ' from _tableinfo;
+    select trim(estimate)||'="'||trim(estimate_label)||'"' into :estimate_labels separated by '0d0a'x from _tableinfo;
+    select trim(moe)||'="'||trim(moe_label)||'"' into :moe_labels separated by '0d0a'x from _tableinfo;
+    select trim(estimate)||'=input('||trim(orig_estimate)||',best32.);' into :estimate_convert separated by '0d0a'x from _tableinfo;
+    select trim(moe)||'=input('||trim(orig_moe)||',best32.);' into :moe_convert separated by '0d0a'x from _tableinfo;
   quit;
 
   %let orig_vars = &orig_estimate &orig_moe;
+  %let full_vars = &add_vars &orig_vars;
 
   %PUT ORIG_VARS=&ORIG_VARS;
   %PUT ESTIMATE_LABELS=&ESTIMATE_LABELS;
@@ -144,17 +149,17 @@
   %let i = 1;
   %let n = 1;
 
-  %do %while ( %length( %scan( &orig_vars, &i, ' ' ) ) > 0 );
+  %do %while ( %length( %scan( &full_vars, &i, ' ' ) ) > 0 );
 
     %let vars_sub = ;
     %let j = 1;
 
-    %do %while ( &j <= 50 and %length( %scan( &orig_vars, &i, ' ' ) ) > 0 );
+    %do %while ( &j <= 50 and %length( %scan( &full_vars, &i, ' ' ) ) > 0 );
 
       %if &vars_sub = %then 
-        %let vars_sub = %scan( &orig_vars, &i, ' ' );
+        %let vars_sub = %scan( &full_vars, &i, ' ' );
       %else
-        %let vars_sub = &vars_sub,%scan( &orig_vars, &i, ' ' );
+        %let vars_sub = &vars_sub,%scan( &full_vars, &i, ' ' );
       
       %let i = %eval( &i + 1 );
       %let j = %eval( &j + 1 );
@@ -171,28 +176,28 @@
     %PUT API_URL=&API_URL;
 
     %Get_census_api(
-      out=&table._&n,
-      /**api="https://api.census.gov/data/2017/acs/acs5?get=B01001_001E&for=tract:*&in=state:01&in=county:*&key=32fb30e46892b2858b58fb5531cb53bf51c90cdf"**/
-      /**api="https://api.census.gov/data/2017/acs/acs5?get=&vars_sub&for=tract:*&in=state:11&in=county:*&key=32fb30e46892b2858b58fb5531cb53bf51c90cdf"**/
+      out=_&table._&n,
       api="&api_url"
-      
     )
     
-    %let file_list = &file_list &table._&n;
+    %let file_list = &file_list _&table._&n;
     
-    proc sort data=&table._&n (drop=ordinal_root);
+    proc sort data=_&table._&n (drop=ordinal_root);
       by &geo_vars.;
     run;
     
-    %File_info( data=&table._&n, stats= )
+    /***%File_info( data=_&table._&n, stats= )***/
 
     %let n = %eval( &n + 1 );
 
   %end;
 
   ** Combine all variables into single data set **;
+  
+  %if &sample = acs1 %then %let out_label = "&table, ACS 1-year, &year, &for_keyword (in=&in)";
+  %else %if &sample = acs5 %then %let out_label = "&table, ACS 5-year, &year, &for_keyword (in=&in)";
 
-  data &table; 
+  data &out (label=&out_label); 
 
     merge &file_list;
     by &geo_vars.;
@@ -211,6 +216,12 @@
 
 
   %***** ***** ***** CLEAN UP ***** ***** *****;
+
+  ** Clean up temporary data sets **;
+  
+  proc datasets library=work /*nolist nowarn*/;
+    delete _tableinfo _&table._: /memtype=data;
+  quit;
 
 
   %exit:
@@ -236,14 +247,14 @@
   %Get_acs_detailed_table_api( )
 
   ** Check reading API: Summary table B01001, 2017 1-year data, all counties in MD **;
-  %Get_acs_detailed_table_api( table=B01001, year=2017, sample=acs1, for=county:*, in=state:24, key=32fb30e46892b2858b58fb5531cb53bf51c90cdf )
+  %Get_acs_detailed_table_api( table=B01001, out=B01001_county, year=2017, sample=acs1, for=county:*, in=state:24, add_vars=name, key=32fb30e46892b2858b58fb5531cb53bf51c90cdf )
 
-  %File_info( data=B01001, printobs=0 )
+  %File_info( data=B01001_county, printobs=5 )
 
   ** Check reading API: Summary table B01001, 2017 5-year data, all tracts in DC **;
-  %Get_acs_detailed_table_api( table=B01001, year=2017, sample=acs5, for=tract:*, in=%nrstr(state:11&in=county:*), key=32fb30e46892b2858b58fb5531cb53bf51c90cdf )
+  %Get_acs_detailed_table_api( table=B01001, out=B01001_tract, year=2017, sample=acs5, for=tract:*, in=%nrstr(state:11&in=county:*), key=32fb30e46892b2858b58fb5531cb53bf51c90cdf )
 
-  %File_info( data=B01001, printobs=0 )
+  %File_info( data=B01001_tract, printobs=0 )
 
   run;
     
