@@ -242,19 +242,21 @@
   %include "D:\Projects\UISUG\Uiautos\Get_census_api.sas";
   
   options mprint nosymbolgen nomlogic;
+  
+  libname temp "D:\temp";
 
   ** Check error handling **;
   %Get_acs_detailed_table_api( )
 
   ** Check reading API: Summary table B01001, 2017 1-year data, all counties in MD **;
-  %Get_acs_detailed_table_api( table=B01001, out=B01001_county, year=2017, sample=acs1, for=county:*, in=state:24, add_vars=name, key=32fb30e46892b2858b58fb5531cb53bf51c90cdf )
+  %Get_acs_detailed_table_api( table=B01001, out=temp.B01001_county, year=2017, sample=acs1, for=county:*, in=state:24, add_vars=name, key=32fb30e46892b2858b58fb5531cb53bf51c90cdf )
 
-  %File_info( data=B01001_county, printobs=5 )
+  %File_info( data=temp.B01001_county, printobs=10, printchar=y )
 
   ** Check reading API: Summary table B01001, 2017 5-year data, all tracts in DC **;
-  %Get_acs_detailed_table_api( table=B01001, out=B01001_tract, year=2017, sample=acs5, for=tract:*, in=%nrstr(state:11&in=county:*), key=32fb30e46892b2858b58fb5531cb53bf51c90cdf )
+  %Get_acs_detailed_table_api( table=B01001, out=temp.B01001_tract, year=2017, sample=acs5, for=tract:*, in=%nrstr(state:11&in=county:*), key=32fb30e46892b2858b58fb5531cb53bf51c90cdf )
 
-  %File_info( data=B01001_tract, printobs=0 )
+  %File_info( data=temp.B01001_tract, printobs=10, printchar=y )
 
   run;
     

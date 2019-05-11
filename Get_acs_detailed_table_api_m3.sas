@@ -78,6 +78,51 @@
   %else %if &for_keyword = county %then %let geo_vars = state county;
 
   filename in url "https://api.census.gov/data/&year./acs/&sample./variables.json" debug;
+  
+  %let tablefiles = _&table._vars;
+  
+  data &tablefiles;
+  
+    infile in firstobs=3 lrecl=3000 dlmstr='//' truncover /*scanover*/;
+
+    length field label group attributes $ 255;
+    length buff $ 3000;
+  
+    input buff;
+    
+    if buff = '}' then stop;
+    
+    field = compress( scan( left( buff ), 1, ':' ), '"' );
+    
+    input buff; 
+
+    do until ( buff =: '}' );
+    
+      select ( compress( scan( left( buff ), 1, ':,' ), '"' ) );
+        when ( 'label' ) label = left( compress( scan( left( buff ), 2, ':,' ), '"' ) );
+        when ( 'group' ) group = left( compress( scan( left( buff ), 2, ':,' ), '"' ) );
+        when ( 'attributes' ) attributes = left( compress( scan( left( buff ), 2, ':' ), '"' ) );
+        otherwise /** DO NOTHING **/;
+      end;
+      
+      input buff;
+      
+    end;
+    
+    if group = "&table" then output;
+    
+    drop buff;
+    
+  run;
+  
+  filename in clear;
+
+  proc sort data=&tablefiles;
+    by field;
+  run;
+
+  
+%MACRO SKIP;  
   /*filename map 'snap.map';*/
   libname in json /*map=map automap=replace*/;
 
@@ -88,6 +133,7 @@
     where libname='IN' and memname like "VARIABLES\_&table.\_%" escape '\'
     order by memname;
   quit;
+%MEND SKIP;
 
   data _tableinfo;
 
@@ -210,6 +256,9 @@
       &moe_labels
     ;
     
+    format _all_ ;
+    informat _all_ ;
+    
     drop &orig_vars;
 
   run;
@@ -243,19 +292,27 @@
   
   options mprint nosymbolgen nomlogic;
 
+  libname temp "D:\temp";
+
   ** Check error handling **;
   %Get_acs_detailed_table_api( )
-
+/******/
   ** Check reading API: Summary table B01001, 2017 1-year data, all counties in MD **;
   %Get_acs_detailed_table_api( table=B01001, out=B01001_county, year=2017, sample=acs1, for=county:*, in=state:24, add_vars=name, key=32fb30e46892b2858b58fb5531cb53bf51c90cdf )
 
-  %File_info( data=B01001_county, printobs=5 )
-
+  %File_info( data=B01001_county, printobs=10, printchar=y )
+  
+  proc compare base=temp.B01001_county compare=B01001_county listall maxprint=(40,32000);
+    id state county;
+  run;
+/******/
   ** Check reading API: Summary table B01001, 2017 5-year data, all tracts in DC **;
   %Get_acs_detailed_table_api( table=B01001, out=B01001_tract, year=2017, sample=acs5, for=tract:*, in=%nrstr(state:11&in=county:*), key=32fb30e46892b2858b58fb5531cb53bf51c90cdf )
 
-  %File_info( data=B01001_tract, printobs=0 )
+  %File_info( data=B01001_tract, printobs=10, printchar=y )
 
+  proc compare base=temp.B01001_tract compare=B01001_tract listall maxprint=(40,32000);
+    id state county tract;
   run;
     
 /**********************************************************************/

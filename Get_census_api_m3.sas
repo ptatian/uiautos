@@ -50,11 +50,11 @@
 
   %***** ***** ***** MACRO BODY ***** ***** *****;
   
-  ** Specify the API URL for the data you want. ;
   filename _rapirsp url &api;
-  filename _rapitmp temp ; ** temporary file, in which to save the census api text, after stripping the leading and closing bracket(s) on each row. ;
+  filename _rapitmp temp;
   
-  ** strip the leading and trailing bracket(s) from each row that the api returns. that turns the file into a simple csv file. ;
+  ** Strip the leading and trailing bracket(s) from each row that the api returns, 
+  ** which turns the file into a simple csv. ;
   
   data _null_ ;
     length _nobrkts $ 5000. ; ** make sure that this length is long enough to capture the longest row produced by the api call. ;
@@ -68,8 +68,10 @@
     put _nobrkts ; ** write the revised line to the temporary text file. ;
   run;
   
-  proc import datafile=_rapitmp dbms=csv out=&out replace ; ** now just import the revised file as a .csv file. ;
-   getnames=yes ; ** get the variable names from the 1st line of the file. ;
+  ** Import revised csv file, getting variable names from 1st row **;
+  
+  proc import datafile=_rapitmp dbms=csv out=&out replace;
+    getnames=yes;
   run;
     
   
