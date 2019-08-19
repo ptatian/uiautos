@@ -7,6 +7,27 @@
 * 05/10/19  Peter A. Tatian
 ****************************************************************************;
 
+%put _all_;
+
+%macro test;
+
+%local v1 v2 v3 v4 ver;
+
+%let v1 = %scan( &SYSVLONG, 1, '.ABCDEFGHIJKLMNOPQRSTUVWXYZ' );
+%let v2 = %scan( &SYSVLONG, 2, '.ABCDEFGHIJKLMNOPQRSTUVWXYZ' );
+%let v3 = %scan( &SYSVLONG, 3, '.ABCDEFGHIJKLMNOPQRSTUVWXYZ' );
+%let v4 = %scan( &SYSVLONG, 4, '.ABCDEFGHIJKLMNOPQRSTUVWXYZ' );
+
+%let ver = %eval( &v4 + 1000 * (&v3) + 100000 * (&v2) + 10000000 * (&v1) );
+
+%put _local_;
+
+%mend test;
+
+%test;
+
+ENDSAS;
+
 /*filename in 'D:\Temp\json_sample.txt';*/
 filename in url "https://api.census.gov/data/2017/acs/acs5/variables.json" debug;
 

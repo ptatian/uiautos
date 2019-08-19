@@ -1,10 +1,13 @@
 /******************* URBAN INSTITUTE MACRO LIBRARY *********************
  
- Macro: Get_acs_detailed_table_api
+ Macro: Get_acs_detailed_table_api_m3
 
  Description: Read Census ACS data for detailed summary table through 
  JSON API service into a SAS data set. Variables are labeled and 
- reformatted at numeric. Requires SAS 9.4M4 or later.
+ reformatted at numeric. 
+ 
+ Written to be compatible with SAS 9.4M3.
+ If using SAS 9.4M4 or later, use %Get_acs_detailed_table_api().
  
  Use: Open code
  
