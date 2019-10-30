@@ -281,7 +281,7 @@ options sasautos=(uiautos sasautos);
 options mprint nosymbolgen nomlogic;
 options msglevel=i;
 
-%let last_year = 2018;
+%let last_year = 2019;
 
 %let i = 12345;
 %let _i = 67890;
