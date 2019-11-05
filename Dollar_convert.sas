@@ -211,7 +211,7 @@
 	%let CPI_2016 = 223.807;  %** Annual 2016 **;
 	%let CPI_2017 = 227.241;  %** Annual 2017 **;
 	%let CPI_2018 = 231.789;  %** Annual 2018 **;  
-	%let CPI_2018 = 233.415;  %** first half average **;  
+	%let CPI_2019 = 233.415;  %** first half average **;  
   %end;
   %else %do;
     %err_mput( macro=Dollar_convert, msg=Invalid SERIES= value: &series )
@@ -330,12 +330,12 @@ data _null_;
   ** LAST ENTRY IS MEANT TO PRODUCE AN ERROR **; 
 
 cards;
-100 1980 2012
-100 2012 1980
-100 1994 2012
-100 1995 2012
-100 2000 2012
-100 2012 1995
+100 1980 2019
+100 2019 1980
+100 1994 2019
+100 1995 2019
+100 2000 2019
+100 2019 1995
 100 1995 2030
 ;
   
