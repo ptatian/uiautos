@@ -161,7 +161,7 @@
 	%let CPI_2016 = 240.007;  %** Annual 2016 **;
 	%let CPI_2017 = 245.120;  %** Annual 2017 **;
 	%let CPI_2018 = 251.107;  %** Annual 2018 **; 
-	%let CPI_2019 = 255.658;  %** Annual 2019 **;  
+	%let CPI_2019 = 255.657;  %** Annual 2019 **;  
 	%let CPI_2020 = 258.255;  %** 2020-Q1 **; 
   %end;
   %else %if &series = CUUR0000SA0L2 %then %do;
@@ -213,7 +213,7 @@
 	%let CPI_2016 = 223.807;  %** Annual 2016 **;
 	%let CPI_2017 = 227.241;  %** Annual 2017 **;
 	%let CPI_2018 = 231.789;  %** Annual 2018 **;  
-	%let CPI_2019 = 234.970;  %** Annual 2019 **;  
+	%let CPI_2019 = 234.215;  %** Annual 2019 **;  
 	%let CPI_2020 = 235.607;  %** 2020-Q1 **; 
   %end;
   %else %do;
