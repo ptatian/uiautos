@@ -88,6 +88,7 @@
    11/29/17  PT Updated 2016 to ANNUAL; 2017 to HALF1.
    06/28/18  LH Updated 2017 to ANNUAL; 2018 to average of Jan-Mar.
    10/30/19  RP Updated 2018 to ANNUAL; 2019 to HALF1.
+   05/29/20  RP Updated 2019 to ANNUAL; 2020 to Q1.
 
   *********************************************************************/
 
@@ -102,12 +103,12 @@
     CPI_1997 CPI_1998 CPI_1999 CPI_2000 CPI_2001 CPI_2002
     CPI_2003 CPI_2004 CPI_2005 CPI_2006 CPI_2007 CPI_2008
     CPI_2009 CPI_2010 CPI_2011 CPI_2012 CPI_2013 CPI_2014
-    CPI_2015 CPI_2016 CPI_2017 CPI_2018 CPI_2019;
+    CPI_2015 CPI_2016 CPI_2017 CPI_2018 CPI_2019 CPI_2020;
 
   %global _dcnv_count;
 
   %let MIN_YEAR = 1979;
-  %let MAX_YEAR = 2019;
+  %let MAX_YEAR = 2020;
 
   %let series = %upcase( &series );
 
@@ -160,7 +161,8 @@
 	%let CPI_2016 = 240.007;  %** Annual 2016 **;
 	%let CPI_2017 = 245.120;  %** Annual 2017 **;
 	%let CPI_2018 = 251.107;  %** Annual 2018 **; 
-	%let CPI_2019 = 254.412;  %** first half average **;  
+	%let CPI_2019 = 255.657;  %** Annual 2019 **;  
+	%let CPI_2020 = 258.255;  %** 2020-Q1 **; 
   %end;
   %else %if &series = CUUR0000SA0L2 %then %do;
     %************************************************** 
@@ -211,7 +213,8 @@
 	%let CPI_2016 = 223.807;  %** Annual 2016 **;
 	%let CPI_2017 = 227.241;  %** Annual 2017 **;
 	%let CPI_2018 = 231.789;  %** Annual 2018 **;  
-	%let CPI_2019 = 233.415;  %** first half average **;  
+	%let CPI_2019 = 234.215;  %** Annual 2019 **;  
+	%let CPI_2020 = 235.607;  %** 2020-Q1 **; 
   %end;
   %else %do;
     %err_mput( macro=Dollar_convert, msg=Invalid SERIES= value: &series )
