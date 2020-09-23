@@ -328,8 +328,8 @@ options mprint nosymbolgen nomlogic;
 options msglevel=n;
 
 %CodeIndex( 
-path=D:\Projects\UISUG\Uiautos,
-htmpath=D:\Projects\UISUG\Uiautos\Html,
+path=C:\Projects\UISUG\Uiautos,
+htmpath=C:\Projects\UISUG\Uiautos\Html,
 htmtitle="Urban Institute SAS Macro Library",
 htmstyle=BarrettsBlue,
 debug=1 )
