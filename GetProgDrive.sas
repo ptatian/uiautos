@@ -25,6 +25,8 @@
   /*************************** UPDATE NOTES ****************************
 
   7/28/15  Program created
+  9/23/20  Modified to return the computer name for network pathnames. 
+           Example: Return "\\SAS1" for pathname "\\sas1\DCData\Libraries".
 
   *********************************************************************/
 
@@ -42,8 +44,13 @@
 
   %let FullName = %sysfunc( getoption( sysin ) );
   
-  %if %length( &FullName ) > 0 %then %do;
-    %let &var = %upcase(%substr( &FullName, 1, 1 ));
+  %if %length( &FullName ) > 1 %then %do;
+    %if %substr( &FullName, 1, 2 ) = \\ %then %do;
+      %let &var = %upcase(%substr( &Fullname, 1, %index( %substr( &Fullname, 3 ), \ ) + 1 ));
+    %end;
+    %else %do;
+      %let &var = %upcase(%substr( &FullName, 1, 1 ));
+    %end; 
   %end;
   %else %do;
     %let &var = ;
