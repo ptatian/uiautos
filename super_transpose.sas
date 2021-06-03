@@ -41,6 +41,7 @@
 
    06/24/06  Peter A. Tatian
    02/23/11  PAT  Added declaration for local macro vars.
+   06/02/21  PAT  Fixed %if issues with empty macro vars. 
 
   *********************************************************************/
 
@@ -70,7 +71,7 @@
 
   %** Check input parameters **;
   
-  %if &var = %then %do;
+  %if %length( &var ) = 0 %then %do;
     %Err_mput( macro=Super_transpose, msg=Parameter VAR= cannot be blank. )
     %goto exit;
   %end;
@@ -115,7 +116,7 @@
         prefix=&tvar._;
       var &tvar;
       id &id;
-      %if &by ~= %then %do;
+      %if %length( &by ) ~= 0 %then %do;
         by &by;
       %end;
     run;
@@ -132,7 +133,7 @@
   data &out;
   
     merge &files;
-    %if &by ~= %then %do;
+    %if %length( &by ) ~= 0 %then %do;
       by &by;
     %end;
 
