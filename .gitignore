@@ -45,3 +45,5 @@
 # Executables
 *.bat
 *.exe
+*.ps1
+
