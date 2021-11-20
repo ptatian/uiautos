@@ -1,0 +1,276 @@
+<!doctype html public "-//w3c//dtd html 4.0 final//en">
+<html>
+   <head>
+      <title>Get_acs_detailed_table_api.sas</title>
+   </head>
+   <body>
+      <pre>
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Get_acs_detailed_table_api
+
+ Description: Read Census ACS data for detailed summary table through 
+ JSON API service into a SAS data set. Variables are labeled and 
+ reformatted at numeric. Requires SAS 9.4M4 or later.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
+
+%macro Get_acs_detailed_table_api( 
+  table=,      /** ACS detailed summary table ID **/
+  year=,       /** 4-digit ACS data year (last year for 5-year data) **/
+  sample=,     /** ACS1 (1-year) or ACS5 (5-year) data samples **/
+  for=,        /** Geographic level specification (eg, tract:*) **/
+  in=,         /** Selection criteria (eg, state:24) **/
+  add_vars=,   /** Additional variables to include in data set (optional) **/
+  out=,        /** Output data set (optional, default is table ID) **/
+  key=         /** Census API key (optional) **/
+);
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+    %Get_acs_detailed_table_api( 
+      table=B01001, 
+      year=2017, 
+      sample=acs1, 
+      for=county:*, 
+      in=%nrstr(state:24)
+    )
+
+       Reads summary table B01001, 2017 1-year data, all counties in MD,
+       to SAS data set work.B01001.
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+  
+
+  *********************************************************************/
+
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %note_mput( macro=Get_acs_detailed_table_api, msg=Macro starting. )
+  
+  %local 
+    for_keyword geo_vars tablefiles i j n full_vars orig_vars vars_sub 
+    file_list api_url out_label
+    orig_estimate orig_moe estimate_labels moe_labels 
+    estimate_convert moe_convert;
+
+  %let table = %upcase( &amp;table );
+  %let for = %lowcase( &amp;for );
+  %let add_vars = %upcase( &amp;add_vars );
+
+  %let for_keyword = %scan( &amp;for, 1, : );
+  
+  %if %length( &amp;out ) = 0 %then %let out = &amp;table;
+
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+  %if %length( &amp;table ) = 0 %then %do;
+    %err_mput( macro=Get_acs_detailed_table_api, msg=Must provide a TABLE= value (summary table ID). )
+    %goto exit;
+  %end;
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+  
+  %if &amp;for_keyword = tract %then %let geo_vars = state county tract;
+  %else %if &amp;for_keyword = county %then %let geo_vars = state county;
+
+  filename in url "https://api.census.gov/data/&amp;year./acs/&amp;sample./variables.json" debug;
+  /*filename map 'snap.map';*/
+  libname in json /*map=map automap=replace*/;
+
+  /*%File_info( data=IN.VARIABLES_B01001_001E )*/
+
+  proc sql noprint;
+    select 'IN.' || left( memname ) into :tablefiles separated by ' ' from dictionary.tables
+    where libname='IN' and memname like "VARIABLES\_&amp;table.\_%" escape '\'
+    order by memname;
+  quit;
+
+  data _tableinfo;
+
+    length label estimate_label moe_label $ 250;
+    length rootvar table orig_estimate orig_moe estimate moe $ 40;
+
+    set &amp;tablefiles;
+    
+    rootvar = left( scan( attributes, 1, ',' ) );
+    
+    do until ( indexc( substr( left( reverse( rootvar ) ), 1, 1 ), '0123456789' ) or rootvar = '' );
+      rootvar = substr( rootvar, 1, length( rootvar ) - 1 );
+    end;
+    
+    orig_estimate = trim( rootvar ) || 'E';
+    orig_moe = trim( rootvar ) || 'M';;
+    
+    table = left( scan( rootvar, 1, '_' ) );
+    cellnum = input( left( scan( rootvar, 2, '_' ) ), 12. );
+    
+    estimate = trim( table ) || 'e' || left( put( cellnum, 12. ) );
+    moe = trim( table ) || 'm' || left( put( cellnum, 12. ) );
+    
+    i = index( label, '!!' );
+    
+    estimate_label = tranwrd( substr( label, i + 2 ), '!!', ': ' );
+    moe_label = trim( estimate_label ) || " (margin of error)";
+    
+    keep orig_estimate orig_moe estimate moe estimate_label moe_label label table cellnum;
+    
+  run;
+
+  ***PROC PRINT;
+
+  /**proc contents data=in._all_; run;***/
+
+  proc sql noprint;
+    select orig_estimate into :orig_estimate separated by ' ' from _tableinfo;
+    select orig_moe into :orig_moe separated by ' ' from _tableinfo;
+    select trim(estimate)||'="'||trim(estimate_label)||'"' into :estimate_labels separated by '0d0a'x from _tableinfo;
+    select trim(moe)||'="'||trim(moe_label)||'"' into :moe_labels separated by '0d0a'x from _tableinfo;
+    select trim(estimate)||'=input('||trim(orig_estimate)||',best32.);' into :estimate_convert separated by '0d0a'x from _tableinfo;
+    select trim(moe)||'=input('||trim(orig_moe)||',best32.);' into :moe_convert separated by '0d0a'x from _tableinfo;
+  quit;
+
+  %let orig_vars = &amp;orig_estimate &amp;orig_moe;
+  %let full_vars = &amp;add_vars &amp;orig_vars;
+
+  %PUT ORIG_VARS=&amp;ORIG_VARS;
+  %PUT ESTIMATE_LABELS=&amp;ESTIMATE_LABELS;
+  %PUT MOE_LABELS=&amp;MOE_LABELS;
+
+  ***ENDSAS;
+
+  **options mprint symbolgen mlogic;
+
+
+  %let file_list = ;
+  %let i = 1;
+  %let n = 1;
+
+  %do %while ( %length( %scan( &amp;full_vars, &amp;i, ' ' ) ) &gt; 0 );
+
+    %let vars_sub = ;
+    %let j = 1;
+
+    %do %while ( &amp;j &lt;= 50 and %length( %scan( &amp;full_vars, &amp;i, ' ' ) ) &gt; 0 );
+
+      %if &amp;vars_sub = %then 
+        %let vars_sub = %scan( &amp;full_vars, &amp;i, ' ' );
+      %else
+        %let vars_sub = &amp;vars_sub,%scan( &amp;full_vars, &amp;i, ' ' );
+      
+      %let i = %eval( &amp;i + 1 );
+      %let j = %eval( &amp;j + 1 );
+      
+    %end;
+    
+    %** Build API URL **;
+    
+    %let api_url = https://api.census.gov/data/&amp;year./acs/&amp;sample.?get=&amp;vars_sub.%nrstr(&amp;for)=&amp;for.%nrstr(&amp;in)=&amp;in.;
+    
+    %if %length( &amp;key ) &gt; 0 %then
+      %let api_url = &amp;api_url.%nrstr(&amp;key)=&amp;key;
+
+    %PUT API_URL=&amp;API_URL;
+
+    %Get_census_api(
+      out=_&amp;table._&amp;n,
+      api="&amp;api_url"
+    )
+    
+    %let file_list = &amp;file_list _&amp;table._&amp;n;
+    
+    proc sort data=_&amp;table._&amp;n (drop=ordinal_root);
+      by &amp;geo_vars.;
+    run;
+    
+    /***%File_info( data=_&amp;table._&amp;n, stats= )***/
+
+    %let n = %eval( &amp;n + 1 );
+
+  %end;
+
+  ** Combine all variables into single data set **;
+  
+  %if &amp;sample = acs1 %then %let out_label = "&amp;table, ACS 1-year, &amp;year, &amp;for_keyword (in=&amp;in)";
+  %else %if &amp;sample = acs5 %then %let out_label = "&amp;table, ACS 5-year, &amp;year, &amp;for_keyword (in=&amp;in)";
+
+  data &amp;out (label=&amp;out_label); 
+
+    merge &amp;file_list;
+    by &amp;geo_vars.;
+    
+    &amp;estimate_convert
+    &amp;moe_convert
+    
+    label 
+      &amp;estimate_labels
+      &amp;moe_labels
+    ;
+    
+    drop &amp;orig_vars;
+
+  run;
+
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+  ** Clean up temporary data sets **;
+  
+  proc datasets library=work /*nolist nowarn*/;
+    delete _tableinfo _&amp;table._: /memtype=data;
+  quit;
+
+
+  %exit:
+
+  %note_mput( macro=Get_acs_detailed_table_api, msg=Macro exiting. )  
+  
+
+%mend Get_acs_detailed_table_api;
+
+
+/************************ UNCOMMENT TO TEST ***************************
+
+  ** Locations of SAS autocall macro libraries **;
+
+  filename uiautos  "K:\Metro\PTatian\UISUG\Uiautos";
+  options sasautos=(uiautos sasautos);
+  
+  %include "C:\Projects\UISUG\Uiautos\Get_census_api.sas";
+
+  options nocenter;
+  options mprint nosymbolgen nomlogic;
+  
+  libname temp "C:\temp";
+
+  title "** Check error handling **";
+  %Get_acs_detailed_table_api( )
+
+  title "** Check reading API: Summary table B01001, 2017 1-year data, all counties in MD **";
+  %Get_acs_detailed_table_api( table=B01001, out=temp.B01001_county, year=2017, sample=acs1, for=county:*, in=state:24, add_vars=name )
+
+  %File_info( data=temp.B01001_county, printobs=10, printchar=y )
+
+  title "** Check reading API: Summary table B01001, 2017 5-year data, all tracts in DC **";
+  %Get_acs_detailed_table_api( table=B01001, out=temp.B01001_tract, year=2017, sample=acs5, for=tract:*, in=%nrstr(state:11&amp;in=county:*) )
+
+  %File_info( data=temp.B01001_tract, printobs=10, printchar=y )
+
+  run;
+  
+  title;
+    
+/**********************************************************************/
+      </pre>
+   </body>
+</html>
