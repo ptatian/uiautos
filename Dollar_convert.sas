@@ -283,7 +283,7 @@
 
 /************************ UNCOMMENT TO TEST ***************************
 
-filename uiautos "D:\Projects\UISUG\Uiautos";
+filename uiautos "C:\Projects\UISUG\Uiautos";
 options sasautos=(uiautos sasautos);
 options mprint nosymbolgen nomlogic;
 options msglevel=i;
@@ -337,12 +337,12 @@ data _null_;
   ** LAST ENTRY IS MEANT TO PRODUCE AN ERROR **; 
 
 cards;
-100 1980 2019
-100 2019 1980
-100 1994 2019
-100 1995 2019
-100 2000 2019
-100 2019 1995
+100 1980 2021
+100 2021 1980
+100 1994 2021
+100 1995 2021
+100 2000 2021
+100 2021 1995
 100 1995 2030
 ;
   
@@ -370,7 +370,7 @@ data test;
 
 	set input;
 	%dollar_convert( amount, year2000 , 1980, 2000, quiet=N, series=CUUR0000SA0L2 )
-	%dollar_convert( amount, year2010 , 1980, 2010, quiet=N, series=CUUR0000SA0L2 )
+	%dollar_convert( amount, year2021 , 1980, 2021, quiet=N, series=CUUR0000SA0L2 )
 
 run;
 
