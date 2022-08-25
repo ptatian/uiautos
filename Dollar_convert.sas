@@ -90,7 +90,7 @@
    10/30/19  RP Updated 2018 to ANNUAL; 2019 to HALF1.
    05/29/20  RP Updated 2019 to ANNUAL; 2020 to Q1.
    03/18/22  LH Updated 2020 to ANNUAL; add 2021 ANNUAL. 
-
+   08/24/22  RP Updated 2022 to HALF1; 
   *********************************************************************/
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
@@ -105,12 +105,12 @@
     CPI_2003 CPI_2004 CPI_2005 CPI_2006 CPI_2007 CPI_2008
     CPI_2009 CPI_2010 CPI_2011 CPI_2012 CPI_2013 CPI_2014
     CPI_2015 CPI_2016 CPI_2017 CPI_2018 CPI_2019 CPI_2020
-    CPI_2021;
+    CPI_2021 CPI_2022;
 
   %global _dcnv_count;
 
   %let MIN_YEAR = 1979;
-  %let MAX_YEAR = 2021;
+  %let MAX_YEAR = 2022;
 
   %let series = %upcase( &series );
 
@@ -166,6 +166,7 @@
 	%let CPI_2019 = 255.657;  %** Annual 2019 **;  
 	%let CPI_2020 = 258.811;  %** Annual 2020 **; 
 	%let CPI_2021 = 270.970;  %** Annual 2021 **;
+	%let CPI_2022 = 288.347;  %** HALF1 2022 **;
   %end;
   %else %if &series = CUUR0000SA0L2 %then %do;
     %************************************************** 
@@ -219,6 +220,7 @@
 	%let CPI_2019 = 234.215;  %** Annual 2019 **;  
 	%let CPI_2020 = 235.676;  %** Annual 2020 **; 
 	%let CPI_2021 = 249.142;  %** Annual 2021 **; 
+	%let CPI_2022 = 268.207;  %** HALF1 2022 **; 
   %end;
   %else %do;
     %err_mput( macro=Dollar_convert, msg=Invalid SERIES= value: &series )
