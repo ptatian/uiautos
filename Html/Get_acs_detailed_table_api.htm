@@ -83,9 +83,15 @@
   
   %if &amp;for_keyword = tract %then %let geo_vars = state county tract;
   %else %if &amp;for_keyword = county %then %let geo_vars = state county;
+  %else %if &amp;for_keyword = place %then %let geo_vars = state place;
+  %else %if &amp;for_keyword = state %then %let geo_vars = state;
+  %else %if &amp;for_keyword = block%20group %then %let geo_vars = state county tract blockgroup;
+  %else %do;
+    %err_mput( macro=Get_acs_detailed_table_api, msg=Summary level &amp;for_keyword not currently supported by this macro. )
+    %goto exit;
+  %end;
 
   filename in url "https://api.census.gov/data/&amp;year./acs/&amp;sample./variables.json" debug;
-  /*filename map 'snap.map';*/
   libname in json /*map=map automap=replace*/;
 
   /*%File_info( data=IN.VARIABLES_B01001_001E )*/
@@ -126,10 +132,8 @@
     keep orig_estimate orig_moe estimate moe estimate_label moe_label label table cellnum;
     
   run;
-
-  ***PROC PRINT;
-
-  /**proc contents data=in._all_; run;***/
+  
+  ** Generate macro variables with lists needed for processing **;
 
   proc sql noprint;
     select orig_estimate into :orig_estimate separated by ' ' from _tableinfo;
@@ -146,11 +150,8 @@
   %PUT ORIG_VARS=&amp;ORIG_VARS;
   %PUT ESTIMATE_LABELS=&amp;ESTIMATE_LABELS;
   %PUT MOE_LABELS=&amp;MOE_LABELS;
-
-  ***ENDSAS;
-
-  **options mprint symbolgen mlogic;
-
+  
+  ** Process API calls. Only can request 50 variables at a time **;
 
   %let file_list = ;
   %let i = 1;
@@ -175,7 +176,10 @@
     
     %** Build API URL **;
     
-    %let api_url = https://api.census.gov/data/&amp;year./acs/&amp;sample.?get=&amp;vars_sub.%nrstr(&amp;for)=&amp;for.%nrstr(&amp;in)=&amp;in.;
+    %if %length( &amp;in ) &gt; 0 %then
+      %let api_url = https://api.census.gov/data/&amp;year./acs/&amp;sample.?get=&amp;vars_sub.%nrstr(&amp;for)=&amp;for.%nrstr(&amp;in)=&amp;in.;
+    %else
+      %let api_url = https://api.census.gov/data/&amp;year./acs/&amp;sample.?get=&amp;vars_sub.%nrstr(&amp;for)=&amp;for.;
     
     %if %length( &amp;key ) &gt; 0 %then
       %let api_url = &amp;api_url.%nrstr(&amp;key)=&amp;key;
@@ -246,25 +250,36 @@
   filename uiautos  "K:\Metro\PTatian\UISUG\Uiautos";
   options sasautos=(uiautos sasautos);
   
-  %include "C:\Projects\UISUG\Uiautos\Get_census_api.sas";
-
   options nocenter;
   options mprint nosymbolgen nomlogic;
   
-  libname temp "C:\temp";
-
   title "** Check error handling **";
   %Get_acs_detailed_table_api( )
+  %Get_acs_detailed_table_api( table=B01001, out=B01001_county, year=2017, sample=acs1, for=notageo:*, in=state:24, add_vars=name )
+  
+  title "** Check reading API: Summary table B01001, 2022 1-year data, all states **";
+  %Get_acs_detailed_table_api( table=B01001, out=B01001_state, year=2022, sample=acs1, for=state:*, in=, add_vars=name )
+  %File_info( data=B01001_state, printobs=20, printchar=y )
 
-  title "** Check reading API: Summary table B01001, 2017 1-year data, all counties in MD **";
-  %Get_acs_detailed_table_api( table=B01001, out=temp.B01001_county, year=2017, sample=acs1, for=county:*, in=state:24, add_vars=name )
+  title "** Check reading API: Summary table B01001, 2022 5-year data, all places in MD **";
+  %Get_acs_detailed_table_api( table=B01001, out=B01001_place, year=2022, sample=acs5, for=place:*, in=state:24, add_vars=name )
+  %File_info( data=B01001_place, printobs=20, printchar=y )
 
-  %File_info( data=temp.B01001_county, printobs=10, printchar=y )
+  title "** Check reading API: Summary table B01001, 2022 5-year data, all counties in MD **";
+  %Get_acs_detailed_table_api( table=B01001, out=B01001_county_5yr, year=2022, sample=acs5, for=county:*, in=state:24, add_vars=name )
+  %File_info( data=B01001_county_5yr, printobs=20, printchar=y )
+
+  title "** Check reading API: Summary table B01001, 2022 1-year data, all counties in MD **";
+  %Get_acs_detailed_table_api( table=B01001, out=B01001_county_1yr, year=2022, sample=acs1, for=county:*, in=state:24, add_vars=name )
+  %File_info( data=B01001_county_1yr, printobs=20, printchar=y )
 
   title "** Check reading API: Summary table B01001, 2017 5-year data, all tracts in DC **";
-  %Get_acs_detailed_table_api( table=B01001, out=temp.B01001_tract, year=2017, sample=acs5, for=tract:*, in=%nrstr(state:11&amp;in=county:*) )
+  %Get_acs_detailed_table_api( table=B01001, out=B01001_tract, year=2017, sample=acs5, for=tract:*, in=%nrstr(state:11&amp;in=county:*) )
+  %File_info( data=B01001_tract, printobs=20, printchar=y )
 
-  %File_info( data=temp.B01001_tract, printobs=10, printchar=y )
+  title "** Check reading API: Summary table B01001, 2017 5-year data, all block groups in DC **";
+  %Get_acs_detailed_table_api( table=B01001, out=B01001_block_group, year=2017, sample=acs5, for=block%20group:*, in=state:11%20in=county:* )
+  %File_info( data=B01001_block_group, printobs=20, printchar=y )
 
   run;
   

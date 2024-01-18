@@ -68,7 +68,7 @@
     array elemCols{*} element:;
     length rename $4000;
     do i=1 to dim(elemCols);
-      rename=catx(' ',rename, catx('=','element'||compress(put(i,3.)),elemCols{i}));
+      rename=catx(' ',rename, catx('=','element'||compress(put(i,3.)),compress(elemCols{i}," ")));
     end;
     call symputx('rename',rename);
   run;
@@ -108,6 +108,16 @@
   ** Check reading API: all 2017 5-year Alabama tract populations **;
   %Get_census_api( 
     api='https://api.census.gov/data/2017/acs/acs5?get=B01001_001E,NAME&for=tract:*&in=state:01&in=county:*',
+    out=alabama_tracts
+  )
+  
+  proc contents;
+  
+  proc print;
+  
+  ** Check reading API: all 2017 5-year Alabama block group populations **;
+  %Get_census_api( 
+    api='https://api.census.gov/data/2017/acs/acs5?get=B01001_001E,NAME&for=block%20group:*&in=state:01%20in=county:*',
     out=alabama_tracts
   )
   
