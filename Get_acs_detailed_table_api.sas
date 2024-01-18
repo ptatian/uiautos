@@ -243,25 +243,36 @@
   filename uiautos  "K:\Metro\PTatian\UISUG\Uiautos";
   options sasautos=(uiautos sasautos);
   
-  %include "C:\Projects\UISUG\Uiautos\Get_census_api.sas";
-
   options nocenter;
   options mprint nosymbolgen nomlogic;
   
-  libname temp "C:\temp";
-
   title "** Check error handling **";
   %Get_acs_detailed_table_api( )
+  %Get_acs_detailed_table_api( table=B01001, out=B01001_county, year=2017, sample=acs1, for=notageo:*, in=state:24, add_vars=name )
+  
+  title "** Check reading API: Summary table B01001, 2022 1-year data, all states **";
+  %Get_acs_detailed_table_api( table=B01001, out=B01001_state, year=2022, sample=acs1, for=state:*, in=, add_vars=name )
+  %File_info( data=B01001_state, printobs=20, printchar=y )
 
-  title "** Check reading API: Summary table B01001, 2017 1-year data, all counties in MD **";
-  %Get_acs_detailed_table_api( table=B01001, out=temp.B01001_county, year=2017, sample=acs1, for=county:*, in=state:24, add_vars=name )
+  title "** Check reading API: Summary table B01001, 2022 5-year data, all places in MD **";
+  %Get_acs_detailed_table_api( table=B01001, out=B01001_place, year=2022, sample=acs5, for=place:*, in=state:24, add_vars=name )
+  %File_info( data=B01001_place, printobs=20, printchar=y )
 
-  %File_info( data=temp.B01001_county, printobs=10, printchar=y )
+  title "** Check reading API: Summary table B01001, 2022 5-year data, all counties in MD **";
+  %Get_acs_detailed_table_api( table=B01001, out=B01001_county_5yr, year=2022, sample=acs5, for=county:*, in=state:24, add_vars=name )
+  %File_info( data=B01001_county_5yr, printobs=20, printchar=y )
+
+  title "** Check reading API: Summary table B01001, 2022 1-year data, all counties in MD **";
+  %Get_acs_detailed_table_api( table=B01001, out=B01001_county_1yr, year=2022, sample=acs1, for=county:*, in=state:24, add_vars=name )
+  %File_info( data=B01001_county_1yr, printobs=20, printchar=y )
 
   title "** Check reading API: Summary table B01001, 2017 5-year data, all tracts in DC **";
-  %Get_acs_detailed_table_api( table=B01001, out=temp.B01001_tract, year=2017, sample=acs5, for=tract:*, in=%nrstr(state:11&in=county:*) )
+  %Get_acs_detailed_table_api( table=B01001, out=B01001_tract, year=2017, sample=acs5, for=tract:*, in=%nrstr(state:11&in=county:*) )
+  %File_info( data=B01001_tract, printobs=20, printchar=y )
 
-  %File_info( data=temp.B01001_tract, printobs=10, printchar=y )
+  title "** Check reading API: Summary table B01001, 2017 5-year data, all block groups in DC **";
+  %Get_acs_detailed_table_api( table=B01001, out=B01001_block_group, year=2017, sample=acs5, for=block%20group:*, in=state:11%20in=county:* )
+  %File_info( data=B01001_block_group, printobs=20, printchar=y )
 
   run;
   
