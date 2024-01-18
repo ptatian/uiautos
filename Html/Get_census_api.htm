@@ -75,7 +75,7 @@
     array elemCols{*} element:;
     length rename $4000;
     do i=1 to dim(elemCols);
-      rename=catx(' ',rename, catx('=','element'||compress(put(i,3.)),elemCols{i}));
+      rename=catx(' ',rename, catx('=','element'||compress(put(i,3.)),compress(elemCols{i}," ")));
     end;
     call symputx('rename',rename);
   run;
