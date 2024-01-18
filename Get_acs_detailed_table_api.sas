@@ -76,6 +76,13 @@
   
   %if &for_keyword = tract %then %let geo_vars = state county tract;
   %else %if &for_keyword = county %then %let geo_vars = state county;
+  %else %if &for_keyword = place %then %let geo_vars = state place;
+  %else %if &for_keyword = state %then %let geo_vars = state;
+  %else %if &for_keyword = block%20group %then %let geo_vars = state county tract blockgroup;
+  %else %do;
+    %err_mput( macro=Get_acs_detailed_table_api, msg=Summary level &for_keyword not currently supported by this macro. )
+    %goto exit;
+  %end;
 
   filename in url "https://api.census.gov/data/&year./acs/&sample./variables.json" debug;
   /*filename map 'snap.map';*/
@@ -168,7 +175,10 @@
     
     %** Build API URL **;
     
-    %let api_url = https://api.census.gov/data/&year./acs/&sample.?get=&vars_sub.%nrstr(&for)=&for.%nrstr(&in)=&in.;
+    %if %length( &in ) > 0 %then
+      %let api_url = https://api.census.gov/data/&year./acs/&sample.?get=&vars_sub.%nrstr(&for)=&for.%nrstr(&in)=&in.;
+    %else
+      %let api_url = https://api.census.gov/data/&year./acs/&sample.?get=&vars_sub.%nrstr(&for)=&for.;
     
     %if %length( &key ) > 0 %then
       %let api_url = &api_url.%nrstr(&key)=&key;
