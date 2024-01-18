@@ -85,7 +85,6 @@
   %end;
 
   filename in url "https://api.census.gov/data/&year./acs/&sample./variables.json" debug;
-  /*filename map 'snap.map';*/
   libname in json /*map=map automap=replace*/;
 
   /*%File_info( data=IN.VARIABLES_B01001_001E )*/
@@ -126,10 +125,8 @@
     keep orig_estimate orig_moe estimate moe estimate_label moe_label label table cellnum;
     
   run;
-
-  ***PROC PRINT;
-
-  /**proc contents data=in._all_; run;***/
+  
+  ** Generate macro variables with lists needed for processing **;
 
   proc sql noprint;
     select orig_estimate into :orig_estimate separated by ' ' from _tableinfo;
@@ -146,11 +143,8 @@
   %PUT ORIG_VARS=&ORIG_VARS;
   %PUT ESTIMATE_LABELS=&ESTIMATE_LABELS;
   %PUT MOE_LABELS=&MOE_LABELS;
-
-  ***ENDSAS;
-
-  **options mprint symbolgen mlogic;
-
+  
+  ** Process API calls. Only can request 50 variables at a time **;
 
   %let file_list = ;
   %let i = 1;
