@@ -109,18 +109,30 @@
     end;
     
     orig_estimate = trim( rootvar ) || 'E';
-    orig_moe = trim( rootvar ) || 'M';;
     
     table = left( scan( rootvar, 1, '_' ) );
     cellnum = input( left( scan( rootvar, 2, '_' ) ), 12. );
     
     estimate = trim( table ) || 'e' || left( put( cellnum, 12. ) );
-    moe = trim( table ) || 'm' || left( put( cellnum, 12. ) );
     
-    i = index( label, '!!' );
+    estimate_label = tranwrd( substr( label, index( label, '!!' ) + 2 ), '!!', ': ' );
     
-    estimate_label = tranwrd( substr( label, i + 2 ), '!!', ': ' );
-    moe_label = trim( estimate_label ) || " (margin of error)";
+    ** Check that variable has MOE **;
+    
+    orig_moe = trim( rootvar ) || 'M';;
+
+    if findw( upcase( attributes ), trim( upcase( orig_moe ) ), ',' ) then do;
+    
+        moe = trim( table ) || 'm' || left( put( cellnum, 12. ) );
+
+        moe_label = trim( estimate_label ) || " (margin of error)";
+        
+    end;
+    else do;
+    
+      orig_moe = "";
+      
+    end;
     
     keep orig_estimate orig_moe estimate moe estimate_label moe_label label table cellnum;
     
@@ -130,20 +142,16 @@
 
   proc sql noprint;
     select orig_estimate into :orig_estimate separated by ' ' from _tableinfo;
-    select orig_moe into :orig_moe separated by ' ' from _tableinfo;
+    select orig_moe into :orig_moe separated by ' ' from _tableinfo where orig_moe ~= "";
     select trim(estimate)||'="'||trim(estimate_label)||'"' into :estimate_labels separated by '0d0a'x from _tableinfo;
-    select trim(moe)||'="'||trim(moe_label)||'"' into :moe_labels separated by '0d0a'x from _tableinfo;
+    select trim(moe)||'="'||trim(moe_label)||'"' into :moe_labels separated by '0d0a'x from _tableinfo where orig_moe ~= "";
     select trim(estimate)||'=input('||trim(orig_estimate)||',best32.);' into :estimate_convert separated by '0d0a'x from _tableinfo;
-    select trim(moe)||'=input('||trim(orig_moe)||',best32.);' into :moe_convert separated by '0d0a'x from _tableinfo;
+    select trim(moe)||'=input('||trim(orig_moe)||',best32.);' into :moe_convert separated by '0d0a'x from _tableinfo where orig_moe ~= "";
   quit;
 
   %let orig_vars = &orig_estimate &orig_moe;
   %let full_vars = &add_vars &orig_vars;
 
-  %PUT ORIG_VARS=&ORIG_VARS;
-  %PUT ESTIMATE_LABELS=&ESTIMATE_LABELS;
-  %PUT MOE_LABELS=&MOE_LABELS;
-  
   ** Process API calls. Only can request 50 variables at a time **;
 
   %let file_list = ;
@@ -231,7 +239,6 @@
   %exit:
 
   %note_mput( macro=Get_acs_detailed_table_api, msg=Macro exiting. )  
-  
 
 %mend Get_acs_detailed_table_api;
 
@@ -273,6 +280,10 @@
   title "** Check reading API: Summary table B01001, 2017 5-year data, all block groups in DC **";
   %Get_acs_detailed_table_api( table=B01001, out=B01001_block_group, year=2017, sample=acs5, for=block%20group:*, in=state:11%20in=county:* )
   %File_info( data=B01001_block_group, printobs=20, printchar=y )
+
+  title "** Check reading API: Summary table B98001 (table with no MOEs), 2022 5-year data, all counties in MD **";
+  %Get_acs_detailed_table_api( table=B98001, out=B98001_county_5yr, year=2022, sample=acs5, for=county:*, in=state:24, add_vars=name )
+  %File_info( data=B98001_county_5yr, printobs=20 )
 
   run;
   
