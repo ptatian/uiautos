@@ -41,6 +41,8 @@
 
   /*************************** UPDATE NOTES ****************************
   
+  01/18/24 PAT Added support for more geographies. 
+  01/20/24 PAT Added error checking for nonexistent table.
 
   *********************************************************************/
 
@@ -91,16 +93,10 @@
 
   proc sql noprint;
     select 'IN.' || left( memname ) into :tablefiles separated by ' ' from dictionary.tables
-    where libname='IN' and memname like "VARIABLES\_&table.\_%" escape '\';
+    where libname='IN' and memname like "VARIABLES\_&table.\_%" escape '\'
+    order by memname;
   quit;
-  
-  %** Check whether table was in variable list **;
-  
-  %if %length( &tablefiles ) = 0 %then %do;
-    %err_mput( macro=Get_acs_detailed_table_api, msg=%str(Table &table is not available for year=&year, sample=&sample..) )
-    %goto exit;
-  %end;
-    
+
   data _tableinfo;
 
     length label estimate_label moe_label $ 250;
@@ -191,7 +187,7 @@
     %if %length( &key ) > 0 %then
       %let api_url = &api_url.%nrstr(&key)=&key;
 
-    %put api_url=&api_url;
+    %PUT API_URL=&API_URL;
 
     %Get_census_api(
       out=_&table._&n,
@@ -241,6 +237,7 @@
     delete _tableinfo _&table._: /memtype=data;
   quit;
 
+
   %exit:
 
   %note_mput( macro=Get_acs_detailed_table_api, msg=Macro exiting. )  
@@ -261,7 +258,6 @@
   title "** Check error handling **";
   %Get_acs_detailed_table_api( )
   %Get_acs_detailed_table_api( table=B01001, out=B01001_county, year=2017, sample=acs1, for=notageo:*, in=state:24, add_vars=name )
-  %Get_acs_detailed_table_api( table=C25074, out=C25074_county_5yr, year=2022, sample=acs5, for=county:*, in=state:24, add_vars=name )
   
   title "** Check reading API: Summary table B01001, 2022 1-year data, all states **";
   %Get_acs_detailed_table_api( table=B01001, out=B01001_state, year=2022, sample=acs1, for=state:*, in=, add_vars=name )
