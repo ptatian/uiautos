@@ -41,6 +41,8 @@
 
   /*************************** UPDATE NOTES ****************************
   
+  01/18/24 PAT Added support for more geographies. 
+  01/20/24 PAT Added error checking for nonexistent table.
 
   *********************************************************************/
 
