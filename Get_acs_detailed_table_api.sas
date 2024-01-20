@@ -93,10 +93,14 @@
 
   proc sql noprint;
     select 'IN.' || left( memname ) into :tablefiles separated by ' ' from dictionary.tables
-    where libname='IN' and memname like "VARIABLES\_&table.\_%" escape '\'
-    order by memname;
+    where libname='IN' and memname like "VARIABLES\_&table.\_%" escape '\';
   quit;
-
+  
+  %if %length( &tablefiles ) = 0 %then %do;
+    %err_mput( macro=Get_acs_detailed_table_api, msg=Table &table is not available. )
+    %goto exit;
+  %end;
+    
   data _tableinfo;
 
     length label estimate_label moe_label $ 250;
@@ -187,7 +191,7 @@
     %if %length( &key ) > 0 %then
       %let api_url = &api_url.%nrstr(&key)=&key;
 
-    %PUT API_URL=&API_URL;
+    %put api_url=&api_url;
 
     %Get_census_api(
       out=_&table._&n,
@@ -236,7 +240,6 @@
   proc datasets library=work /*nolist nowarn*/;
     delete _tableinfo _&table._: /memtype=data;
   quit;
-
 
   %exit:
 
