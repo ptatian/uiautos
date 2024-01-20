@@ -94,8 +94,10 @@
     where libname='IN' and memname like "VARIABLES\_&table.\_%" escape '\';
   quit;
   
+  %** Check whether table was in variable list **;
+  
   %if %length( &tablefiles ) = 0 %then %do;
-    %err_mput( macro=Get_acs_detailed_table_api, msg=Table &table is not available. )
+    %err_mput( macro=Get_acs_detailed_table_api, msg=%str(Table &table is not available for year=&year, sample=&sample..) )
     %goto exit;
   %end;
     
@@ -259,6 +261,7 @@
   title "** Check error handling **";
   %Get_acs_detailed_table_api( )
   %Get_acs_detailed_table_api( table=B01001, out=B01001_county, year=2017, sample=acs1, for=notageo:*, in=state:24, add_vars=name )
+  %Get_acs_detailed_table_api( table=C25074, out=C25074_county_5yr, year=2022, sample=acs5, for=county:*, in=state:24, add_vars=name )
   
   title "** Check reading API: Summary table B01001, 2022 1-year data, all states **";
   %Get_acs_detailed_table_api( table=B01001, out=B01001_state, year=2022, sample=acs1, for=state:*, in=, add_vars=name )
