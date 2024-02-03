@@ -303,7 +303,7 @@
 
   ** Clean up temporary data sets **;
   
-  proc datasets library=work /*nolist nowarn*/;
+  proc datasets library=work nolist nowarn;
     delete _tableinfo _&table._: /memtype=data;
   quit;
 
