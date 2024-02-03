@@ -1,0 +1,148 @@
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Get_acs_table_titles
+
+ Description: Produce list of Census ACS table titles for specified tables.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
+
+%macro Get_acs_table_titles( 
+  table_list=, /** List of ACS detailed summary table IDs **/
+  year=,       /** 4-digit ACS data year (last year for 5-year data) **/
+  sample=      /** ACS1 (1-year) or ACS5 (5-year) data samples **/
+);
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+    %Get_acs_table_titles( 
+      table_list=B01001 B01002 B01003, 
+      year=2017, 
+      sample=acs1
+    )
+
+    Lists titles for tables B01001, B01002, B01003 for 2017 1-year data.
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+  
+
+  *********************************************************************/
+
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %note_mput( macro=Get_acs_table_titles, msg=Macro starting. )
+  
+  %local i v;
+
+  %let table_list = %ListNoDup( %upcase( &table_list ) );
+  
+  %push_option( mprint, quiet=Y )
+
+  options nomprint;
+
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+
+  %if %length( &table_list ) = 0 %then %do;
+    %err_mput( macro=Get_acs_table_titles, msg=Must provide a TABLE_LIST= value (list of table IDs). )
+    %goto exit;
+  %end;
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+  
+  filename in url "https://api.census.gov/data/&year./acs/&sample./variables.json" debug;
+  libname in json /*map=map automap=replace*/;
+  
+  data _table_titles;
+  
+    length group $ 40 concept $ 2000;
+  
+    set
+
+      %let i = 1;
+      %let v = %scan( &table_list, &i, %str( ) );
+
+      %do %until ( &v = );
+      
+        %if %Dataset_exists( IN.VARIABLES_&v._001E ) %then %do;
+
+          IN.VARIABLES_&v._001E (keep=group concept)
+        
+        %end;
+        %else %do;
+        
+          %warn_mput( macro=Get_acs_table_titles, msg=%str(Table &v is not available for year=&year, sample=&sample..) )
+          
+        %end;
+
+        %let i = %eval( &i + 1 );
+        %let v = %scan( &table_list, &i, %str( ) );
+
+      %end;
+      
+    ;
+    
+  run;
+  
+  proc sort data=_table_titles;
+    by group;
+  run;
+  
+  proc print data=_table_titles label;
+    id group;
+    var concept;
+    label
+      group = "Table ID"
+      concept = "Title";
+  run;
+
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+  ** Clean up temporary data sets **;
+
+  proc datasets library=work nolist nowarn;
+    delete _table_titles /memtype=data;
+  quit;
+
+  %exit:
+  
+  %pop_option( mprint, quiet=Y )
+
+  %note_mput( macro=Get_acs_table_titles, msg=Macro exiting. )  
+
+%mend Get_acs_table_titles;
+
+
+/************************ UNCOMMENT TO TEST ***************************
+
+  ** Locations of SAS autocall macro libraries **;
+
+  filename uiautos  "K:\Metro\PTatian\UISUG\Uiautos";
+  options sasautos=(uiautos sasautos);
+  
+  options nocenter;
+  options mprint nosymbolgen nomlogic;
+  
+  title "** Check error handling **";
+  %Get_acs_table_titles( )
+  
+  title "** Table title lists **";
+  
+  %Get_acs_table_titles( table_list=B01001 B01002 B01001 B01003 B01001, year=2022, sample=acs5 )
+  
+  %Get_acs_table_titles( table_list=B19001A B19001B B19001C B19001D B19001E B19001F B19001G B19001H B19001I, year=2022, sample=acs5 )
+  
+  run;
+  
+  title;
+    
+/**********************************************************************/
