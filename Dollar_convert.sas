@@ -92,6 +92,7 @@
    03/18/22  LH Updated 2020 to ANNUAL; add 2021 ANNUAL. 
    08/24/22  RP Updated 2022 to HALF1; 
    05/12/23  RP Updated 2022 to ANNUAL; add 2023 to Q1. 
+   02/07/24  PT Updated 2023 to ANNUAL. Fixed error in 2023 macro var name for CUUR0000SA0L2.
   *********************************************************************/
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
@@ -168,7 +169,7 @@
 	%let CPI_2020 = 258.811;  %** Annual 2020 **; 
 	%let CPI_2021 = 270.970;  %** Annual 2021 **;
 	%let CPI_2022 = 292.655;  %** Annual 2022 **;
-	%let CPI_2023 = 300.615;  %** Q1 2023 **;
+	%let CPI_2023 = 304.702;  %** Annual 2023 **;
   %end;
   %else %if &series = CUUR0000SA0L2 %then %do;
     %************************************************** 
@@ -223,7 +224,7 @@
 	%let CPI_2020 = 235.676;  %** Annual 2020 **; 
 	%let CPI_2021 = 249.142;  %** Annual 2021 **; 
 	%let CPI_2022 = 271.690;  %** Annual 2022 **;
-	%let CPI_2022 = 275.920;  %** Q1 2023 **;
+	%let CPI_2023 = 278.412;  %** Annual 2023 **;
   %end;
   %else %do;
     %err_mput( macro=Dollar_convert, msg=Invalid SERIES= value: &series )
@@ -255,18 +256,18 @@
   
   if (&from) < &MIN_YEAR or (&from) > &MAX_YEAR then do;
     %if %datatyp(&from) = NUMERIC %then %do;
-      %err_put( macro=Dollar_convert, msg=_n_= "Invalid year FROM=&from..  Only years &MIN_YEAR-&MAX_YEAR supported." )
+      %err_put( macro=Dollar_convert, msg=_n_= "Invalid year FROM=%trim(&from). Only years &MIN_YEAR-&MAX_YEAR supported." )
     %end;
     %else %do;
-      %err_put( macro=Dollar_convert, msg=_n_= "Invalid year FROM=" &from ". Only years &MIN_YEAR-&MAX_YEAR supported." )
+      %err_put( macro=Dollar_convert, msg=_n_= "Invalid year FROM=" %trim(&from)". Only years &MIN_YEAR-&MAX_YEAR supported." )
     %end;
   end;
   else if (&to) < &MIN_YEAR or (&to) > &MAX_YEAR then do;
     %if %datatyp(&to) = NUMERIC %then %do;
-      %err_put( macro=Dollar_convert, msg=_n_= "Invalid year TO=&to..  Only years &MIN_YEAR-&MAX_YEAR supported." )
+      %err_put( macro=Dollar_convert, msg=_n_= "Invalid year TO=%trim(&to). Only years &MIN_YEAR-&MAX_YEAR supported." )
     %end;
     %else %do;
-      %err_put( macro=Dollar_convert, msg=_n_= "Invalid year TO=" &to ". Only years &MIN_YEAR-&MAX_YEAR supported." )
+      %err_put( macro=Dollar_convert, msg=_n_= "Invalid year TO=" %trim(&to)". Only years &MIN_YEAR-&MAX_YEAR supported." )
     %end;
   end;
   else do;
@@ -293,7 +294,7 @@ options sasautos=(uiautos sasautos);
 options mprint nosymbolgen nomlogic;
 options msglevel=i;
 
-%let last_year = 2019;
+%let last_year = 2023;
 
 %let i = 12345;
 %let _i = 67890;
@@ -323,7 +324,7 @@ data _null_;
   put amount2=;
   
   ** NEXT INVOCATION IS MEANT TO PRODUCE AN ERROR **;
-  %dollar_convert( 100, amount2, 1995, 2030, quiet=N, series=CUUR0000SA0L2 );
+  %dollar_convert( 100, amount2, 1995, 2099, quiet=N, series=CUUR0000SA0L2 );
   put amount2=;
 
 run;
@@ -342,13 +343,13 @@ data _null_;
   ** LAST ENTRY IS MEANT TO PRODUCE AN ERROR **; 
 
 cards;
-100 1980 2021
-100 2021 1980
+100 1980 2023
+100 2023 1980
 100 1994 2021
 100 1995 2021
 100 2000 2021
 100 2021 1995
-100 1995 2030
+100 1995 2099
 ;
   
 run;
@@ -374,8 +375,8 @@ run;
 data test;
 
 	set input;
-	%dollar_convert( amount, year2000 , 1980, 2000, quiet=N, series=CUUR0000SA0L2 )
-	%dollar_convert( amount, year2021 , 1980, 2021, quiet=N, series=CUUR0000SA0L2 )
+	%dollar_convert( amount, year1980, &last_year, 1980, quiet=N, series=CUUR0000SA0L2 )
+	%dollar_convert( amount, year&last_year , 1980, &last_year, quiet=N, series=CUUR0000SA0L2 )
 
 run;
 
