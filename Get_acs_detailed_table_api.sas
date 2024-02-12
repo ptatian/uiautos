@@ -20,7 +20,8 @@
   in=,         /** Selection criteria (eg, state:24) **/
   add_vars=,   /** Additional variables to include in data set (optional) **/
   out=,        /** Output data set (optional, default is table ID) **/
-  key=,         /** Census API key (optional) **/
+  key=,        /** Census API key (optional) **/
+  get_moe=y,   /** Retrieve margins of error as part of data (Yes/No) **/
   old_var_names=n  /** Use old style variable names eg: B01001e1, B01001m1 (Yes/No) **/
 );
 
@@ -113,6 +114,12 @@
 
       length label estimate_label moe_label $ 250;
       length rootvar table orig_estimate orig_moe estimate moe $ 40;
+      
+      ** Initialize MOE vars **;
+      
+      orig_moe = "";
+      moe_label = "";
+      moe = "";
 
       set &tablefiles;
       
@@ -131,22 +138,26 @@
       
       estimate_label = tranwrd( substr( label, index( label, '!!' ) + 2 ), '!!', ': ' );
       
-      ** Check that variable has MOE **;
+      %if %mparam_is_yes( &get_moe ) %then %do;
       
-      orig_moe = trim( rootvar ) || 'M';;
-
-      if findw( upcase( attributes ), trim( upcase( orig_moe ) ), ',' ) then do;
-      
-          moe = trim( table ) || 'm' || left( put( cellnum, 12. ) );
-
-          moe_label = trim( estimate_label ) || " (margin of error)";
-          
-      end;
-      else do;
-      
-        orig_moe = "";
+        ** Check that variable has MOE **;
         
-      end;
+        orig_moe = trim( rootvar ) || 'M';;
+
+        if findw( upcase( attributes ), trim( upcase( orig_moe ) ), ',' ) then do;
+        
+            moe = trim( table ) || 'm' || left( put( cellnum, 12. ) );
+
+            moe_label = trim( estimate_label ) || " (margin of error)";
+            
+        end;
+        else do;
+        
+          orig_moe = "";
+          
+        end;
+        
+      %end;
       
       keep orig_estimate orig_moe estimate moe estimate_label moe_label label;
       
@@ -162,6 +173,12 @@
       length label estimate_label moe_label $ 250;
       length rootvar orig_estimate orig_moe estimate moe $ 40;
 
+      ** Initialize MOE vars **;
+      
+      orig_moe = "";
+      moe_label = "";
+      moe = "";
+
       set &tablefiles;
       
       rootvar = left( scan( attributes, 1, ',' ) );
@@ -176,22 +193,26 @@
       
       estimate_label = tranwrd( substr( label, index( label, '!!' ) + 2 ), '!!', ': ' );
       
-      ** Check that variable has MOE **;
-      
-      orig_moe = trim( rootvar ) || 'M';
+      %if %mparam_is_yes( &get_moe ) %then %do;
 
-      if findw( upcase( attributes ), trim( upcase( orig_moe ) ), ',' ) then do;
-      
-          moe = '_' || trim( rootvar ) || 'M';
-
-          moe_label = trim( estimate_label ) || " (margin of error)";
-          
-      end;
-      else do;
-      
-        orig_moe = "";
+        ** Check that variable has MOE **;
         
-      end;
+        orig_moe = trim( rootvar ) || 'M';
+
+        if findw( upcase( attributes ), trim( upcase( orig_moe ) ), ',' ) then do;
+        
+            moe = '_' || trim( rootvar ) || 'M';
+
+            moe_label = trim( estimate_label ) || " (margin of error)";
+            
+        end;
+        else do;
+        
+          orig_moe = "";
+          
+        end;
+      
+      %end;
       
       keep orig_estimate orig_moe estimate moe estimate_label moe_label label;
       
@@ -331,6 +352,10 @@
 
   title "** Check reading API: Summary table B01001, 2022 1-year data, all states **";
   %Get_acs_detailed_table_api( table=B01001, out=B01001_state, year=2022, sample=acs1, for=state:*, in=, add_vars=name )
+  %File_info( data=B01001_state, printobs=20, printchar=y )
+
+  title "** Check reading API: Summary table B01001, 2022 1-year data, all states, SKIP MOES **";
+  %Get_acs_detailed_table_api( table=B01001, out=B01001_state, year=2022, sample=acs1, for=state:*, in=, add_vars=name, get_moe=n )
   %File_info( data=B01001_state, printobs=20, printchar=y )
 
   title "** Check reading API: Summary table B01001, 2022 1-year data, all states, OLD VARIABLE NAMES **";
