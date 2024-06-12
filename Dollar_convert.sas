@@ -292,12 +292,12 @@
 
 /************************ UNCOMMENT TO TEST ***************************
 
-filename uiautos "C:\Projects\UISUG\Uiautos";
+filename uiautos "C:\DCData\uiautos";
 options sasautos=(uiautos sasautos);
 options mprint nosymbolgen nomlogic;
 options msglevel=i;
 
-%let last_year = 2023;
+%let last_year = 2024;
 
 %let i = 12345;
 %let _i = 67890;
@@ -346,7 +346,7 @@ data _null_;
   ** LAST ENTRY IS MEANT TO PRODUCE AN ERROR **; 
 
 cards;
-100 1980 2023
+100 1980 2024
 100 2023 1980
 100 1994 2021
 100 1995 2021
