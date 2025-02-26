@@ -183,6 +183,25 @@
     %goto exit_err;
   %end;
   
+  %** Check that library is not archived **;
+  
+  %Data_to_format( 
+    FmtName=$libchkb, 
+    inDS=&meta_lib..&meta_pre._libs, 
+    value=upcase( Library ),
+    label=put( MetadataLibArchive, 1. ),
+    otherlabel="0",
+    print=N )
+
+  data _null_;
+    call symput( 'lib_archived', put( upcase( "&ds_lib_display" ), $libchkb. ) );
+  run;
+    
+  %if &lib_archived = 1 %then %do;
+    %Err_mput( macro=Update_metadata_file, msg=Library &ds_lib_display is archived. No updates can be made to this library. )
+    %goto exit_err;
+  %end;
+  
   %** Check for existence of data set to be registered **;
   
   %if not ( %Dataset_exists( &ds_lib..&ds_name, quiet=n, memtype=data ) or
