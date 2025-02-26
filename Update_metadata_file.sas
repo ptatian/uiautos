@@ -292,7 +292,7 @@
     /* File record */
     _f_&ds_name25 
       (keep=libname_display memname memlabel nobs modate MetadataUpdated FileCreator FileProcess
-            FileFmt FileRestrict FileSortedBy
+            FileFmt FileRestrict FileSortedBy MetadataFileArchive 
        rename=(libname_display=Library memname=FileName memlabel=FileDesc nobs=NumObs 
                modate=FileUpdated))
 
@@ -326,7 +326,7 @@
       FileCreator FileProcess $ 80
       FileRestrict FileSortedBy $ 250
       FileRevisions $ 500
-      ListFmtVals 3
+      MetadataFileArchive ListFmtVals 3
     ;
     
     ** Process file-level data (first obs.) **;
@@ -356,6 +356,7 @@
       FileRevisions = "&revisions";
       FileRestrict = "&restrictions";
       FileSortedBy = lowcase( "&sortvars" );
+      MetadataFileArchive = 0;
       
       output _f_&ds_name25;
       
@@ -396,6 +397,7 @@
       ListFmtVals = "Formatted values listed in metadata (1=Yes)"
       VarNameUC = "Variable name (uppercase, for sorting)"
       VarType = "Variable type (C/N)"
+      MetadataFileArchive = "Metadata for file has been archived (1=Yes)"
     ;
     
   run;
@@ -757,14 +759,14 @@
 ** Autocall macros **;
 
 filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
-options sasautos=(uiautos sasautos) noxwait;
+options sasautos=(uiautos sasautos) noxwait nocenter;
 
 ** Set up and clear test folder **;
 
-x "md d:\temp\Update_metadata_file_test";
-x "del /q d:\temp\Update_metadata_file_test\*.*";
+x "md c:\temp\Update_metadata_file_test";
+x "del /q c:\temp\Update_metadata_file_test\*.*";
 
-libname test "d:\temp\Update_metadata_file_test\";
+libname test "c:\temp\Update_metadata_file_test\";
 
 proc format library=work;
   value $region
@@ -874,7 +876,7 @@ run;
 proc datasets library=Test memtype=(data);
 quit;
 
-%File_info( data=Test.Meta_files, printobs=50, contents=n, stats= )
+%File_info( data=Test.Meta_files, printobs=50, contents=y, stats= )
 %File_info( data=Test.Meta_vars, printobs=50, contents=n, stats= )
 %File_info( data=Test.Meta_fval, printobs=50, contents=n, stats= )
 %File_info( data=Test.Meta_history, printobs=50, contents=n, stats= )
