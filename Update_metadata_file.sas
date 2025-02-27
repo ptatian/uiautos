@@ -119,7 +119,7 @@
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %local sortvars SAS_DATASET_VIEW lib_exists ds_name25 allfvar i em num_fval_vars num_obs num_vars;
+  %local sortvars SAS_DATASET_VIEW lib_exists lib_archived ds_name25 allfvar i em num_fval_vars num_obs num_vars;
 
   %let SAS_DATASET_VIEW = "SASDSV";
     
@@ -164,39 +164,20 @@
     %goto exit_err;
   %end;
 
-  %** Check that library is registered **;
+  %** Check that library is registered and not archived **;
   
-  %Data_to_format( 
-    FmtName=$libchk, 
-    inDS=&meta_lib..&meta_pre._libs, 
-    value=upcase( Library ),
-    label="Y",
-    otherlabel="N",
-    print=N )
+  proc sql noprint;
+    select count( Library ), MetadataLibArchive into :lib_exists, :lib_archived from &meta_lib..&meta_pre._libs
+    where upcase( Library ) = upcase( "&ds_lib_display" );
+  quit;
 
-  data _null_;
-    call symput( 'lib_exists', put( upcase( "&ds_lib_display" ), $libchk. ) );
-  run;
-    
-  %if &lib_exists = N %then %do;
+  /***%put lib_exists=&lib_exists lib_archived=&lib_archived;***/
+  
+  %if &lib_exists = 0 %then %do;
     %Err_mput( macro=Update_metadata_file, msg=Library &ds_lib_display is not registered in the metadata system. )
     %goto exit_err;
   %end;
   
-  %** Check that library is not archived **;
-  
-  %Data_to_format( 
-    FmtName=$libchkb, 
-    inDS=&meta_lib..&meta_pre._libs, 
-    value=upcase( Library ),
-    label=put( MetadataLibArchive, 1. ),
-    otherlabel="0",
-    print=N )
-
-  data _null_;
-    call symput( 'lib_archived', put( upcase( "&ds_lib_display" ), $libchkb. ) );
-  run;
-    
   %if &lib_archived = 1 %then %do;
     %Err_mput( macro=Update_metadata_file, msg=Library &ds_lib_display is archived. No updates can be made to this library. )
     %goto exit_err;
@@ -777,7 +758,8 @@
 
 ** Autocall macros **;
 
-filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
+***filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
+filename uiautos "C:\DCData\uiautos";
 options sasautos=(uiautos sasautos) noxwait nocenter;
 
 ** Set up and clear test folder **;
@@ -835,6 +817,26 @@ run;
 %File_info( data=Test.shoes, freqvars=region )
 %File_info( data=Test.shoes_nonum, stats= )
 %File_info( data=Test.shoes_empty, stats= )
+
+
+** Testing for reporting error when library metadata file does not exist **;
+
+%Update_metadata_file( 
+         ds_lib=Test,
+         ds_name=Shoes,
+         creator=SAS Institute,
+         creator_process=SAS Institute,
+         revisions=Test file.,
+         meta_lib=Test
+      )
+
+** Create library metadata file **;
+
+%Update_metadata_library( 
+         lib_name=Foo,
+         lib_desc=Foo library,
+         meta_lib=Test
+      )
 
 
 ** Testing for reporting error when trying to register a data set to an unregistered library **;
