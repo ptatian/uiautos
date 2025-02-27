@@ -83,29 +83,75 @@
   
   proc sql noprint;
     select count( FileName ), MetadataFileArchive into :file_registered, :file_archived from &meta_lib..&meta_pre._files
-    where upcase( Library ) = upcase( "&ds_lib_display" ) and upcase( FileName ) = upcase( "&ds_name" );
+    where upcase( Library ) = upcase( "&ds_lib" ) and upcase( FileName ) = upcase( "&ds_name" );
   quit;
 
   %PUT FILE_REGISTERED=&FILE_REGISTERED FILE_ARCHIVED=&FILE_ARCHIVED;
   
   %if &file_registered = 0 %then %do;
-    %Err_mput( macro=Archive_metadata_file, msg=Data set &ds_lib_display..&ds_name is not registered in the metadata system. )
+    %Err_mput( macro=Archive_metadata_file, msg=Data set &ds_lib..&ds_name is not registered in the metadata system. )
     %goto exit;
   %end;
   
   %if &file_archived = 1 %then %do;
-    %Err_mput( macro=Archive_metadata_file, msg=Data set &ds_lib_display..&ds_name is already archived. )
+    %Err_mput( macro=Archive_metadata_file, msg=Data set &ds_lib..&ds_name is already archived. )
     %goto exit;
   %end;
   
 
   %***** ***** ***** MACRO BODY ***** ***** *****;
   
+  ** Set MetadataFileArchive = 1 **;
   
+  data &meta_lib..&meta_pre._files;
+  
+    set &meta_lib..&meta_pre._files;
+  
+    if upcase( Library ) = upcase( "&ds_lib" ) and upcase( FileName ) = upcase( "&ds_name" ) then MetadataFileArchive = 1;
+    
+  run;
+  
+  ** Copy HTML files to Archive subfolder **;
+  
+  x "md &html_folder\Archive";
+  x "copy &html_folder.&html_pre._&ds_lib._&ds_name..&html_suf &html_folder\Archive";
+  x "copy &html_folder.&html_pre._&ds_lib._&ds_name._v.&html_suf &html_folder\Archive";
+  x "copy &html_folder.&html_pre._&ds_lib._&ds_name._h.&html_suf &html_folder\Archive";
+
+  ** Delete records from metadata data sets **;
+  
+  data &meta_lib..&meta_pre._vars;
+  
+    set &meta_lib..&meta_pre._vars;
+  
+    where not( upcase( Library ) = upcase( "&ds_lib" ) and upcase( FileName ) = upcase( "&ds_name" ) );
+    
+  run;
+  
+  data &meta_lib..&meta_pre._fval;
+  
+    set &meta_lib..&meta_pre._fval;
+  
+    where not( upcase( Library ) = upcase( "&ds_lib" ) and upcase( FileName ) = upcase( "&ds_name" ) );
+    
+  run;
+  
+  %if %mparam_is_yes( &del_history ) %then %do;
+  
+    data &meta_lib..&meta_pre._history;
+    
+      set &meta_lib..&meta_pre._history;
+    
+      where not( upcase( Library ) = upcase( "&ds_lib" ) and upcase( FileName ) = upcase( "&ds_name" ) );
+      
+    run;
+  
+  %end;
+
 
   %***** ***** ***** CLEAN UP ***** ***** *****;
 
-  %Note_mput( macro=Archive_metadata_file, msg=Data set &ds_lib_display..&ds_name successfully archived. )
+  %Note_mput( macro=Archive_metadata_file, msg=Data set &ds_lib..&ds_name successfully archived. )
   
   %exit:
 
