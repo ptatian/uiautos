@@ -29,7 +29,9 @@
    SAMPLE CALL: 
      %Archive_metadata_file( 
               ds_lib=Dat,
-              ds_name_list=Shoes
+              ds_name_list=Shoes,
+              meta_lib=metadata,
+              html_folder=C:\DCData\Libraries\Metadata\HTML
            )
          archives the metadata for data set Dat.Shoes
 
@@ -42,7 +44,8 @@
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %local file_registered file_archived ds_days_old_list ds_name final_ds_name_list i;
+  %local file_registered file_archived ds_days_old_list ds_name 
+         final_ds_name_list ds_where_list i;
   
   %let ds_lib = %upcase( &ds_lib );
   %let ds_name_list = %upcase( &ds_name_list );
@@ -89,9 +92,7 @@
     %let final_ds_name_list = %ListIntersect( &ds_name_list, &ds_days_old_list  );
   %end;
   %else %let final_ds_name_list = &ds_name_list;
-  
-  %put _local_;
-  
+    
     
   %***** ***** ***** ERROR CHECKS ***** ***** *****;
   
@@ -102,63 +103,111 @@
     %goto exit_err;
   %end;
 
-%let i = 1;
-%let ds_name = %scan( &final_ds_name_list, &i, %str( ) );
+  %if %length( &meta_lib ) = 0 %then %do;
+    %Err_mput( macro=Archive_metadata_file, msg=Library for metadata data sets not provided. )
+    %goto exit_err;
+  %end;
 
-%do %until ( &ds_name = );
-
+  %if %length( &html_folder ) = 0 %then %do;
+    %Err_mput( macro=Archive_metadata_file, msg=Location of metadata HTML folder not provided. )
+    %goto exit_err;
+  %end;
+  
   %** Check that metadata files data set exists **;
   
   %if not %Dataset_exists( &meta_lib..&meta_pre._files, quiet=n ) %then %do;
     %Err_mput( macro=Archive_metadata_file, msg=File &meta_lib..&meta_pre._files does not exist. )
     %goto exit_err;
   %end;
+  
+  %** Perform checks on each data set **;
 
-  %** Check that the data set is registered and not already archived **;
-  
-  proc sql noprint;
-    select count( FileName ), MetadataFileArchive into :file_registered, :file_archived from &meta_lib..&meta_pre._files
-    where upcase( Library ) = "&ds_lib" and upcase( FileName ) = "&ds_name";
-  quit;
-
-  %PUT FILE_REGISTERED=&FILE_REGISTERED FILE_ARCHIVED=&FILE_ARCHIVED;
-  
-  %if &file_registered = 0 %then %do;
-    %Err_mput( macro=Archive_metadata_file, msg=Data set &ds_lib..&ds_name is not registered in the metadata system. )
-    %goto exit_err;
-  %end;
-  
-  %if &file_archived = 1 %then %do;
-    %Err_mput( macro=Archive_metadata_file, msg=Data set &ds_lib..&ds_name is already archived. )
-    %goto exit_err;
-  %end;
-  
-  %let i = %eval( &i + 1 );
+  %let i = 1;
   %let ds_name = %scan( &final_ds_name_list, &i, %str( ) );
 
-%end;
+  %do %until ( &ds_name = );
+
+    %** Check that the data set is registered and not already archived **;
+    
+    proc sql noprint;
+      select count( FileName ), MetadataFileArchive into :file_registered, :file_archived from &meta_lib..&meta_pre._files
+      where upcase( Library ) = "&ds_lib" and upcase( FileName ) = "&ds_name";
+    quit;
+
+    %PUT FILE_REGISTERED=&FILE_REGISTERED FILE_ARCHIVED=&FILE_ARCHIVED;
+    
+    %if &file_registered = 0 %then %do;
+      %Err_mput( macro=Archive_metadata_file, msg=Data set &ds_lib..&ds_name is not registered in the metadata system. )
+      %goto exit_err;
+    %end;
+    
+    %if &file_archived = 1 %then %do;
+      %Err_mput( macro=Archive_metadata_file, msg=Data set &ds_lib..&ds_name is already archived. )
+      %goto exit_err;
+    %end;
+    
+    %let i = %eval( &i + 1 );
+    %let ds_name = %scan( &final_ds_name_list, &i, %str( ) );
+
+  %end;
 
 
-  %MACRO SKIP;
-  
   %***** ***** ***** MACRO BODY ***** ***** *****;
   
+  %** Remove trailing \ from html_folder **;
+  
+  %if %substr( %sysfunc( reverse( &html_folder ) ), 1, 1 ) = \ %then 
+    %let html_folder = %substr( &html_folder, 1, %length( &html_folder ) - 1 );
+
+  %** Create list of data sets for if/where processing **;
+  
+  %let i = 1;
+  %let ds_name = %scan( &final_ds_name_list, &i, %str( ) );
+  
+  %let ds_where_list = ;
+
+  %do %until ( &ds_name = );
+
+    %if %length( &ds_where_list ) > 0 %then 
+      %let ds_where_list = &ds_where_list, %sysfunc( quote(&ds_name) ); 
+    %else 
+      %let ds_where_list = %sysfunc( quote(&ds_name) );
+
+    %let i = %eval( &i + 1 );
+    %let ds_name = %scan( &final_ds_name_list, &i, %str( ) );
+
+  %end;
+  
+  %PUT _LOCAL_;
+
   ** Set MetadataFileArchive = 1 **;
   
   data &meta_lib..&meta_pre._files;
   
     set &meta_lib..&meta_pre._files;
   
-    if upcase( Library ) = upcase( "&ds_lib" ) and upcase( FileName ) = upcase( "&ds_name" ) then MetadataFileArchive = 1;
+    if upcase( Library ) = "&ds_lib" and upcase( FileName ) in ( &ds_where_list ) then MetadataFileArchive = 1;
     
   run;
   
   ** Copy HTML files to Archive subfolder **;
   
-  x "md &html_folder\Archive";
-  x "copy &html_folder.&html_pre._&ds_lib._&ds_name..&html_suf &html_folder\Archive";
-  x "copy &html_folder.&html_pre._&ds_lib._&ds_name._v.&html_suf &html_folder\Archive";
-  x "copy &html_folder.&html_pre._&ds_lib._&ds_name._h.&html_suf &html_folder\Archive";
+  %local i ds_name;
+
+  %let i = 1;
+  %let ds_name = %scan( &final_ds_name_list, &i, %str( ) );
+
+  %do %until ( &ds_name = );
+
+    x "md &html_folder\Archive";
+    x "copy &html_folder\&html_pre._&ds_lib._&ds_name..&html_suf &html_folder\Archive";
+    x "copy &html_folder\&html_pre._&ds_lib._&ds_name._v.&html_suf &html_folder\Archive";
+    x "copy &html_folder\&html_pre._&ds_lib._&ds_name._h.&html_suf &html_folder\Archive";
+
+    %let i = %eval( &i + 1 );
+    %let ds_name = %scan( &final_ds_name_list, &i, %str( ) );
+
+  %end;
 
   ** Delete records from metadata data sets **;
   
@@ -166,7 +215,7 @@
   
     set &meta_lib..&meta_pre._vars;
   
-    where not( upcase( Library ) = upcase( "&ds_lib" ) and upcase( FileName ) = upcase( "&ds_name" ) );
+    where not( upcase( Library ) = "&ds_lib" and upcase( FileName ) in ( &ds_where_list ) );
     
   run;
   
@@ -174,7 +223,7 @@
   
     set &meta_lib..&meta_pre._fval;
   
-    where not( upcase( Library ) = upcase( "&ds_lib" ) and upcase( FileName ) = upcase( "&ds_name" ) );
+    where not( upcase( Library ) = "&ds_lib" and upcase( FileName ) in ( &ds_where_list ) );
     
   run;
   
@@ -184,15 +233,14 @@
     
       set &meta_lib..&meta_pre._history;
     
-      where not( upcase( Library ) = upcase( "&ds_lib" ) and upcase( FileName ) = upcase( "&ds_name" ) );
+      where not( upcase( Library ) = "&ds_lib" and upcase( FileName ) in ( &ds_where_list ) );
       
     run;
   
   %end;
 
   %Note_mput( macro=Archive_metadata_file, msg=Data set &ds_lib..&ds_name successfully archived. )
-  
-%MEND SKIP;
+
 
   %***** ***** ***** CLEAN UP ***** ***** *****;
 
