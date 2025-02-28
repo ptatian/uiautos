@@ -13,7 +13,8 @@
 %macro Archive_metadata_file( 
          ds_lib=        /** Data set library reference **/,
          ds_lib_display=  /** Library name displayed in metadata system (opt.) **/,
-         ds_name=       /** Data set name **/,
+         ds_name_list=    /** List of data set names **/,
+         ds_days_old=   /** Archive data sets that are at least X days old **/,
          del_history=n  /** Delete file history from metadata (opt.) **/,
          meta_lib=        /** Metadata library reference **/,
          meta_pre= meta   /** Metadata data set name prefix **/,
@@ -28,7 +29,7 @@
    SAMPLE CALL: 
      %Archive_metadata_file( 
               ds_lib=Dat,
-              ds_name=Shoes
+              ds_name_list=Shoes
            )
          archives the metadata for data set Dat.Shoes
 
@@ -41,7 +42,10 @@
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %local file_registered file_archived;
+  %local file_registered file_archived ds_days_old_list ds_name final_ds_name_list i;
+  
+  %let ds_lib = %upcase( &ds_lib );
+  %let ds_name_list = %upcase( &ds_name_list );
   
   %** If not specified, use ds_lib value as ds_lib_display **;
   
@@ -68,9 +72,40 @@
   
   options obs=max;
   %Note_mput( macro=Archive_metadata_file, msg=OPTIONS OBS set to MAX for metadata processing. )
-
+  
+  %** Process ds_days_old= parameter, if provided **;
+  
+  %if %length( &ds_days_old ) > 0 %then %do;
+  
+    proc sql noprint;
+      select upcase( FileName ) into :ds_days_old_list separated by ' ' from &meta_lib..&meta_pre._files
+      where upcase( Library ) = "&ds_lib" and ( today() - datepart( FileUpdated ) ) >= &ds_days_old ;
+    quit;
+    
+  %end;
+  
+  %if %length( &ds_name_list ) = 0 %then %let final_ds_name_list = &ds_days_old_list;
+  %else %if %length( &ds_days_old_list ) > 0 %then %do;
+    %let final_ds_name_list = %ListIntersect( &ds_name_list, &ds_days_old_list  );
+  %end;
+  %else %let final_ds_name_list = &ds_name_list;
+  
+  %put _local_;
+  
     
   %***** ***** ***** ERROR CHECKS ***** ***** *****;
+  
+  %** Check for required parameters **;
+  
+  %if %length( &final_ds_name_list ) = 0 %then %do;
+    %Err_mput( macro=Archive_metadata_file, msg=No data sets specified or selected based on parameters provided. )
+    %goto exit_err;
+  %end;
+
+%let i = 1;
+%let ds_name = %scan( &final_ds_name_list, &i, %str( ) );
+
+%do %until ( &ds_name = );
 
   %** Check that metadata files data set exists **;
   
@@ -83,22 +118,29 @@
   
   proc sql noprint;
     select count( FileName ), MetadataFileArchive into :file_registered, :file_archived from &meta_lib..&meta_pre._files
-    where upcase( Library ) = upcase( "&ds_lib" ) and upcase( FileName ) = upcase( "&ds_name" );
+    where upcase( Library ) = "&ds_lib" and upcase( FileName ) = "&ds_name";
   quit;
 
   %PUT FILE_REGISTERED=&FILE_REGISTERED FILE_ARCHIVED=&FILE_ARCHIVED;
   
   %if &file_registered = 0 %then %do;
     %Err_mput( macro=Archive_metadata_file, msg=Data set &ds_lib..&ds_name is not registered in the metadata system. )
-    %goto exit;
+    %goto exit_err;
   %end;
   
   %if &file_archived = 1 %then %do;
     %Err_mput( macro=Archive_metadata_file, msg=Data set &ds_lib..&ds_name is already archived. )
-    %goto exit;
+    %goto exit_err;
   %end;
   
+  %let i = %eval( &i + 1 );
+  %let ds_name = %scan( &final_ds_name_list, &i, %str( ) );
 
+%end;
+
+
+  %MACRO SKIP;
+  
   %***** ***** ***** MACRO BODY ***** ***** *****;
   
   ** Set MetadataFileArchive = 1 **;
@@ -148,10 +190,17 @@
   
   %end;
 
+  %Note_mput( macro=Archive_metadata_file, msg=Data set &ds_lib..&ds_name successfully archived. )
+  
+%MEND SKIP;
 
   %***** ***** ***** CLEAN UP ***** ***** *****;
 
-  %Note_mput( macro=Archive_metadata_file, msg=Data set &ds_lib..&ds_name successfully archived. )
+  %goto exit;
+  
+  %exit_err:
+  
+  %Err_mput( macro=Archive_metadata_file, msg=No data set metadata were archived. )
   
   %exit:
 
