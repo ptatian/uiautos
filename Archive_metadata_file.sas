@@ -44,8 +44,8 @@
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %local file_registered file_archived ds_days_old_list ds_name 
-         final_ds_name_list ds_where_list i;
+  %local lib_registered lib_archived  file_registered file_archived 
+         ds_days_old_list ds_name final_ds_name_list ds_where_list i;
   
   %let ds_lib = %upcase( &ds_lib );
   %let ds_name_list = %upcase( &ds_name_list );
@@ -76,33 +76,11 @@
   options obs=max;
   %Note_mput( macro=Archive_metadata_file, msg=OPTIONS OBS set to MAX for metadata processing. )
   
-  %** Process ds_days_old= parameter, if provided **;
-  
-  %if %length( &ds_days_old ) > 0 %then %do;
-  
-    proc sql noprint;
-      select upcase( FileName ) into :ds_days_old_list separated by ' ' from &meta_lib..&meta_pre._files
-      where upcase( Library ) = "&ds_lib" and ( today() - datepart( FileUpdated ) ) >= &ds_days_old ;
-    quit;
-    
-  %end;
-  
-  %if %length( &ds_name_list ) = 0 %then %let final_ds_name_list = &ds_days_old_list;
-  %else %if %length( &ds_days_old_list ) > 0 %then %do;
-    %let final_ds_name_list = %ListIntersect( &ds_name_list, &ds_days_old_list  );
-  %end;
-  %else %let final_ds_name_list = &ds_name_list;
-    
     
   %***** ***** ***** ERROR CHECKS ***** ***** *****;
   
   %** Check for required parameters **;
   
-  %if %length( &final_ds_name_list ) = 0 %then %do;
-    %Err_mput( macro=Archive_metadata_file, msg=No data sets specified or selected based on parameters provided. )
-    %goto exit_err;
-  %end;
-
   %if %length( &meta_lib ) = 0 %then %do;
     %Err_mput( macro=Archive_metadata_file, msg=Library for metadata data sets not provided. )
     %goto exit_err;
@@ -120,6 +98,47 @@
     %goto exit_err;
   %end;
   
+  %** Check that library is registered and not archived **;
+  
+  proc sql noprint;
+    select count( Library ), MetadataLibArchive into :lib_registered, :lib_archived from &meta_lib..&meta_pre._libs
+    where upcase( Library ) = "&ds_lib";
+  quit;
+
+  %PUT LIB_REGISTERED=&LIB_REGISTERED LIB_ARCHIVED=&LIB_ARCHIVED;
+  
+  %if &lib_registered = 0 %then %do;
+    %Err_mput( macro=Archive_metadata_lib, msg=Library &ds_lib is not registered in the metadata system. )
+    %goto exit_err;
+  %end;
+  
+  %if &lib_archived = 1 %then %do;
+    %Err_mput( macro=Archive_metadata_lib, msg=Library &ds_lib is already archived. )
+    %goto exit_err;
+  %end;
+
+  %** Process ds_days_old= parameter, if provided **;
+  
+  %if %length( &ds_days_old ) > 0 %then %do;
+  
+    proc sql noprint;
+      select upcase( FileName ) into :ds_days_old_list separated by ' ' from &meta_lib..&meta_pre._files
+      where upcase( Library ) = "&ds_lib" and ( today() - datepart( FileUpdated ) ) >= &ds_days_old ;
+    quit;
+    
+  %end;
+  
+  %if %length( &ds_name_list ) = 0 %then %let final_ds_name_list = &ds_days_old_list;
+  %else %if %length( &ds_days_old_list ) > 0 %then %do;
+    %let final_ds_name_list = %ListIntersect( &ds_name_list, &ds_days_old_list  );
+  %end;
+  %else %let final_ds_name_list = &ds_name_list;
+    
+  %if %length( &final_ds_name_list ) = 0 %then %do;
+    %Err_mput( macro=Archive_metadata_file, msg=No data sets specified or selected based on parameters provided. )
+    %goto exit_err;
+  %end;
+
   %** Perform checks on each data set **;
 
   %let i = 1;
