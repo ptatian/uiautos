@@ -211,14 +211,13 @@
   
   ** Copy HTML files to Archive subfolder **;
   
-  %local i ds_name;
+  x "md &html_folder\Archive";
 
   %let i = 1;
   %let ds_name = %scan( &final_ds_name_list, &i, %str( ) );
 
   %do %until ( &ds_name = );
 
-    x "md &html_folder\Archive";
     x "copy &html_folder\&html_pre._&ds_lib._&ds_name..&html_suf &html_folder\Archive";
     x "copy &html_folder\&html_pre._&ds_lib._&ds_name._v.&html_suf &html_folder\Archive";
     x "copy &html_folder\&html_pre._&ds_lib._&ds_name._h.&html_suf &html_folder\Archive";
