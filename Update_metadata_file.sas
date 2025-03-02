@@ -119,7 +119,7 @@
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %local sortvars SAS_DATASET_VIEW lib_exists lib_archived ds_name25 allfvar i em num_fval_vars num_obs num_vars;
+  %local sortvars SAS_DATASET_VIEW lib_exists lib_archived file_registered file_archived ds_name25 allfvar i em num_fval_vars num_obs num_vars;
 
   %let SAS_DATASET_VIEW = "SASDSV";
     
@@ -168,7 +168,7 @@
   
   proc sql noprint;
     select count( Library ), MetadataLibArchive into :lib_exists, :lib_archived from &meta_lib..&meta_pre._libs
-    where upcase( Library ) = upcase( "&ds_lib_display" );
+    where upcase( Library ) = upcase( "&ds_lib" );
   quit;
 
   /***%put lib_exists=&lib_exists lib_archived=&lib_archived;***/
@@ -189,6 +189,23 @@
             %Dataset_exists( &ds_lib..&ds_name, quiet=n, memtype=view ) ) %then %do;
     %Err_mput( macro=Update_metadata_file, msg=The data set &ds_lib..&ds_name does not exist. )
     %goto exit_err;
+  %end;
+
+  %** Check whether data set is archived **;
+
+  %if %Dataset_exists( &meta_lib..&meta_pre._files ) %then %do;
+
+    proc sql noprint;
+      select count( FileName ), MetadataFileArchive into :file_registered, :file_archived from &meta_lib..&meta_pre._files
+      where upcase( Library ) = upcase( "&ds_lib" ) and upcase( FileName ) = upcase( "&ds_name" );
+    quit;
+
+    %if &file_registered = 1 %then %do;
+      %if &file_archived = 1 %then %do;
+        %Warn_mput( macro=Update_metadata_file, msg=Metadata for data set &ds_lib..&ds_name was previously archived. Metadata will be returned to active status. )
+      %end;
+    %end;
+    
   %end;
 
 

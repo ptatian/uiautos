@@ -123,7 +123,7 @@
   
     proc sql noprint;
       select upcase( FileName ) into :ds_days_old_list separated by ' ' from &meta_lib..&meta_pre._files
-      where upcase( Library ) = "&ds_lib" and ( today() - datepart( FileUpdated ) ) >= &ds_days_old ;
+      where upcase( Library ) = "&ds_lib" and ( today() - datepart( FileUpdated ) ) >= &ds_days_old and MetadataFileArchive = 0;
     quit;
     
   %end;
@@ -258,7 +258,7 @@
   
   %end;
 
-  %Note_mput( macro=Archive_metadata_file, msg=Data set &ds_lib..&ds_name successfully archived. )
+  %Note_mput( macro=Archive_metadata_file, msg=Data sets &final_ds_name_list in &ds_lib successfully archived. )
 
 
   %***** ***** ***** CLEAN UP ***** ***** *****;
