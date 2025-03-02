@@ -13,6 +13,7 @@
 %macro Archive_metadata_lib( 
          ds_lib=        /** Data set library reference **/,
          ds_lib_display=  /** Library name displayed in metadata system (opt.) **/,
+         del_history=n  /** Delete file history from metadata (opt.) **/,
          meta_lib=        /** Metadata library reference **/,
          meta_pre= meta   /** Metadata data set name prefix **/,
          html_folder=       /** Folder for HTML files **/,
@@ -136,8 +137,18 @@
   
     if upcase( Library ) = "&ds_lib" then MetadataLibArchive = 1;
     
-  run;  
+  run;
+  
+  ** Set MetadataFileArchive = 1 **;
 
+  data &meta_lib..&meta_pre._files;
+  
+    set &meta_lib..&meta_pre._files;
+  
+    if upcase( Library ) = "&ds_lib" then MetadataFileArchive = 1;
+    
+  run;
+  
   ** Copy HTML files to Archive subfolder **;
   
   x "md &html_folder\Archive";
@@ -159,14 +170,6 @@
 
   ** Delete records from metadata data sets **;
   
-  data &meta_lib..&meta_pre._files;
-  
-    set &meta_lib..&meta_pre._files;
-  
-    where not( upcase( Library ) = "&ds_lib" );
-    
-  run;
-  
   data &meta_lib..&meta_pre._vars;
   
     set &meta_lib..&meta_pre._vars;
@@ -183,13 +186,17 @@
     
   run;
   
-  data &meta_lib..&meta_pre._history;
+  %if %mparam_is_yes( &del_history ) %then %do;
   
-    set &meta_lib..&meta_pre._history;
-  
-    where not( upcase( Library ) = "&ds_lib" );
+    data &meta_lib..&meta_pre._history;
     
-  run;
+      set &meta_lib..&meta_pre._history;
+    
+      where not( upcase( Library ) = "&ds_lib" );
+      
+    run;
+  
+  %end;
   
   %Note_mput( macro=Archive_metadata_lib, msg=Library &ds_lib successfully archived. )
 
