@@ -105,7 +105,7 @@
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %local html_doctype date_fmts datetime_fmts time_fmts cur_dt_raw cur_tm_raw cur_dt cur_tm i em;
+  %local html_doctype date_fmts datetime_fmts time_fmts cur_dt_raw cur_tm_raw cur_dt cur_tm i em archive_folder;
   
   %Note_mput( macro=Create_metadata_html, msg=Macro (version 7/28/17) starting. )
   
@@ -148,6 +148,8 @@
 
   %let cur_dt = %sysfunc( putn( &cur_dt_raw, worddatx12. ) );
   %let cur_tm = %sysfunc( putn( &cur_tm_raw, timeampm8. ) );
+  
+  %let archive_folder = Archive\;
   
   %** Save current OBS= setting then set to MAX **;
 
@@ -373,9 +375,19 @@
       link = '"' || trim( lowcase( Library ) ) || '"';
       
       LastMetadataUpdated = max( LastMetadataUpdated, MetadataUpdated );
+      
+      if MetadataFileArchive then do;
 
-      link = "&html_pre._" || trim( lowcase( library ) ) || 
-             "_" || trim( lowcase( FileName ) ) || ".&html_suf";
+        link = "&archive_folder.&html_pre._" || trim( lowcase( library ) ) || 
+               "_" || trim( lowcase( FileName ) ) || ".&html_suf";
+      
+      end;
+      else do;
+      
+        link = "&html_pre._" || trim( lowcase( library ) ) || 
+               "_" || trim( lowcase( FileName ) ) || ".&html_suf";
+
+      end;
       
       dt = datepart( FileUpdated );
       
@@ -468,6 +480,16 @@
       by library filename;
 
     sys_cmd = '';
+    
+    ** Check whether file was archived **;
+    if MetadataFileArchive then do;
+    
+      %note_put( macro=CREATE_METADATA_HTML, 
+                 msg="File metadata was archived: " library= filename= )
+                 
+      return;   ** Skip to next record **;      
+    
+    end;
 
     ** Check that file has matching variable records **;
     if not in_vars then do;
@@ -513,8 +535,10 @@
       put "<head>";
       put "  <title>&html_title " cname "data set</title>";
       
-      if "&html_stylesht" ~= "" then
+      if "&html_stylesht" ~= "" then do;
         put "  <link rel=""stylesheet"" type=""text/css"" href=""&html_stylesht"">";
+        put "  <link rel=""stylesheet"" type=""text/css"" href=""..\&html_stylesht"">";
+      end;
         
       put &html_meta_tags;
       put "</head>" /;
@@ -771,6 +795,13 @@
     set &meta_pre._values_file;
       by Library FileName VarNameUC;
 
+    ** Check whether file was archived **;
+    if MetadataFileArchive then do;
+    
+      return;   ** Skip to next record **;      
+    
+    end;
+
     file var_out filevar=html_file;
     
     library = %capitalize( library );
@@ -787,8 +818,10 @@
       put "<head>";
       put "  <title>&html_title " cname "variable values</title>";
       
-      if "&html_stylesht" ~= "" then
+      if "&html_stylesht" ~= "" then do;
         put "  <link rel=""stylesheet"" type=""text/css"" href=""&html_stylesht"">";
+        put "  <link rel=""stylesheet"" type=""text/css"" href=""..\&html_stylesht"">";
+      end;
         
       put &html_meta_tags;
       put "</head>" /;
@@ -1117,8 +1150,10 @@
       put "<head>";
       put "  <title>&html_title " cname "revision history</title>";
       
-      if "&html_stylesht" ~= "" then
+      if "&html_stylesht" ~= "" then do;
         put "  <link rel=""stylesheet"" type=""text/css"" href=""&html_stylesht"">";
+        put "  <link rel=""stylesheet"" type=""text/css"" href=""..\&html_stylesht"">";
+      end;
         
       put &html_meta_tags;
       put "</head>";
