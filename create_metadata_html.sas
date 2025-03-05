@@ -530,9 +530,9 @@
       
       put "<h1>&meta_title</h1>" /;
 
-      put "<a href=""&html_pre._libraries.&html_suf"">Libraries</a>" ' &gt;';
+      put "<a href=""&html_folder.&html_pre._libraries.&html_suf"">Libraries</a>" ' &gt;';
 
-      link = "<a href=&html_pre._" || trim( lowcase( library ) ) || ".&html_suf>" ||
+      link = "<a href=&html_folder.&html_pre._" || trim( lowcase( library ) ) || ".&html_suf>" ||
              trim( library ) || '</a> &gt;';
 
       put link;
@@ -545,7 +545,7 @@
       
       put "<table border=""0"" width=""100%"" cellspacing=""0"" cellpadding=""4"">" /;
       
-      link = "&html_pre._" || trim( lowcase( library ) ) || ".&html_suf" ;
+      link = "&html_folder.&html_pre._" || trim( lowcase( library ) ) || ".&html_suf" ;
     
       put "<tr>";
       put "<th align=""left"" valign=""top"">Library:</th>";
@@ -804,9 +804,9 @@
       
       put "<h1>&meta_title</h1>" /;
       
-      put "<a href=""&html_pre._libraries.&html_suf"">Libraries</a>" ' &gt;';
+      put "<a href=""&html_folder.&html_pre._libraries.&html_suf"">Libraries</a>" ' &gt;';
 
-      link = "<a href=&html_pre._" || trim( lowcase( library ) ) || ".&html_suf>" ||
+      link = "<a href=&html_folder.&html_pre._" || trim( lowcase( library ) ) || ".&html_suf>" ||
              trim( library ) || '</a> &gt;';
 
       put link;
@@ -1136,9 +1136,9 @@
       
       put "<h1>&meta_title</h1>" /;
 
-      put "<a href=""&html_pre._libraries.&html_suf"">Libraries</a>" ' &gt;';
+      put "<a href=""&html_folder.&html_pre._libraries.&html_suf"">Libraries</a>" ' &gt;';
 
-      link = "<a href=&html_pre._" || trim( lowcase( library ) ) || ".&html_suf>" ||
+      link = "<a href=&html_folder.&html_pre._" || trim( lowcase( library ) ) || ".&html_suf>" ||
              trim( library ) || '</a> &gt;';
 
       put link;
