@@ -1,0 +1,229 @@
+<!doctype html public "-//w3c//dtd html 4.0 final//en">
+<html>
+   <head>
+      <title>Archive_metadata_lib.sas</title>
+   </head>
+   <body>
+      <pre>
+/******************* URBAN INSTITUTE MACRO LIBRARY *********************
+ 
+ Macro: Archive_metadata_lib
+
+ Description: Archives metadata for a SAS library.
+ 
+ Use: Open code
+ 
+ Author: Peter Tatian
+ 
+***********************************************************************/
+
+%macro Archive_metadata_lib( 
+         ds_lib=        /** Data set library reference **/,
+         ds_lib_display=  /** Library name displayed in metadata system (opt.) **/,
+         del_history=n  /** Delete file history from metadata (opt.) **/,
+         meta_lib=        /** Metadata library reference **/,
+         meta_pre= meta   /** Metadata data set name prefix **/,
+         html_folder=       /** Folder for HTML files **/,
+         html_pre= meta     /** Filename prefix for HTML files **/,
+         html_suf= html     /** Filename suffix for HTML files **/,
+         mprint=N      /** Print resolved macro code to LOG **/
+       );
+
+  /*************************** USAGE NOTES *****************************
+   
+   SAMPLE CALL: 
+     %Archive_metadata_lib( 
+              ds_lib=Dat,
+              meta_lib=metadata,
+              html_folder=C:\DCData\Libraries\Metadata\HTML
+           )
+         archives the metadata for library Dat
+
+  *********************************************************************/
+
+  /*************************** UPDATE NOTES ****************************
+
+
+  *********************************************************************/
+
+  %***** ***** ***** MACRO SET UP ***** ***** *****;
+   
+  %local lib_registered lib_archived final_ds_name_list i ds_name;
+  
+  %let ds_lib = %upcase( &amp;ds_lib );
+  
+  %** If not specified, use ds_lib value as ds_lib_display **;
+  
+  %if &amp;ds_lib_display = %then %let ds_lib_display = &amp;ds_lib;
+  
+  %** Save current MPRINT setting and reset based on MPRINT= parameter **;
+  
+  %Push_option( mprint )
+  
+  %if %mparam_is_yes( &amp;mprint ) %then %do;
+    options mprint;
+  %end;
+  %else %do;
+    options nomprint;
+  %end;
+  
+  %** Force step boundary **;
+  
+  run;
+  
+  %** Save current OBS= setting then set to MAX **;
+
+  %Push_option( obs )
+  
+  options obs=max;
+  %Note_mput( macro=Archive_metadata_lib, msg=OPTIONS OBS set to MAX for metadata processing. )
+      
+    
+  %***** ***** ***** ERROR CHECKS ***** ***** *****;
+  
+  %** Check for required parameters **;
+  
+  %if %length( &amp;meta_lib ) = 0 %then %do;
+    %Err_mput( macro=Archive_metadata_lib, msg=Library for metadata data sets not provided. )
+    %goto exit_err;
+  %end;
+
+  %if %length( &amp;html_folder ) = 0 %then %do;
+    %Err_mput( macro=Archive_metadata_lib, msg=Location of metadata HTML folder not provided. )
+    %goto exit_err;
+  %end;
+  
+  %** Check that metadata library data set exists **;
+  
+  %if not %Dataset_exists( &amp;meta_lib..&amp;meta_pre._libs, quiet=n ) %then %do;
+    %Err_mput( macro=Archive_metadata_lib, msg=File &amp;meta_lib..&amp;meta_pre._libs does not exist. )
+    %goto exit_err;
+  %end;
+  
+  %** Check that library is registered and not archived **;
+  
+  proc sql noprint;
+    select count( Library ), MetadataLibArchive into :lib_registered, :lib_archived from &amp;meta_lib..&amp;meta_pre._libs
+    where upcase( Library ) = "&amp;ds_lib";
+  quit;
+
+  %PUT LIB_REGISTERED=&amp;LIB_REGISTERED LIB_ARCHIVED=&amp;LIB_ARCHIVED;
+  
+  %if &amp;lib_registered = 0 %then %do;
+    %Err_mput( macro=Archive_metadata_lib, msg=Library &amp;ds_lib is not registered in the metadata system. )
+    %goto exit_err;
+  %end;
+  
+  %if &amp;lib_archived = 1 %then %do;
+    %Err_mput( macro=Archive_metadata_lib, msg=Library &amp;ds_lib is already archived. )
+    %goto exit_err;
+  %end;
+
+
+  %***** ***** ***** MACRO BODY ***** ***** *****;
+  
+  %** Remove trailing \ from html_folder **;
+  
+  %if %substr( %sysfunc( reverse( &amp;html_folder ) ), 1, 1 ) = \ %then 
+    %let html_folder = %substr( &amp;html_folder, 1, %length( &amp;html_folder ) - 1 );
+    
+  ** Generate list of unarchived data sets **;
+  
+  proc sql noprint;
+    select upcase( FileName ) into :final_ds_name_list separated by ' ' from &amp;meta_lib..&amp;meta_pre._files
+    where upcase( Library ) = "&amp;ds_lib" and MetadataFileArchive = 0;
+  quit;
+  
+  ** Set MetadataLibArchive = 1 **;
+  
+  data &amp;meta_lib..&amp;meta_pre._libs;
+  
+    set &amp;meta_lib..&amp;meta_pre._libs;
+  
+    if upcase( Library ) = "&amp;ds_lib" then MetadataLibArchive = 1;
+    
+  run;
+  
+  ** Set MetadataFileArchive = 1 **;
+
+  data &amp;meta_lib..&amp;meta_pre._files;
+  
+    set &amp;meta_lib..&amp;meta_pre._files;
+  
+    if upcase( Library ) = "&amp;ds_lib" then MetadataFileArchive = 1;
+    
+  run;
+  
+  ** Copy HTML files to Archive subfolder **;
+  
+  x "md &amp;html_folder\Archive";
+
+  %let i = 1;
+  %let ds_name = %scan( &amp;final_ds_name_list, &amp;i, %str( ) );
+
+  %do %until ( &amp;ds_name = );
+
+    x "copy &amp;html_folder\&amp;html_pre._&amp;ds_lib._&amp;ds_name..&amp;html_suf &amp;html_folder\Archive";
+    x "copy &amp;html_folder\&amp;html_pre._&amp;ds_lib._&amp;ds_name._v.&amp;html_suf &amp;html_folder\Archive";
+    x "copy &amp;html_folder\&amp;html_pre._&amp;ds_lib._&amp;ds_name._h.&amp;html_suf &amp;html_folder\Archive";
+
+    %let i = %eval( &amp;i + 1 );
+    %let ds_name = %scan( &amp;final_ds_name_list, &amp;i, %str( ) );
+
+  %end;
+
+  ** Delete records from metadata data sets **;
+  
+  data &amp;meta_lib..&amp;meta_pre._vars;
+  
+    set &amp;meta_lib..&amp;meta_pre._vars;
+  
+    where not( upcase( Library ) = "&amp;ds_lib" );
+    
+  run;
+  
+  data &amp;meta_lib..&amp;meta_pre._fval;
+  
+    set &amp;meta_lib..&amp;meta_pre._fval;
+  
+    where not( upcase( Library ) = "&amp;ds_lib" );
+    
+  run;
+  
+  %if %mparam_is_yes( &amp;del_history ) %then %do;
+  
+    data &amp;meta_lib..&amp;meta_pre._history;
+    
+      set &amp;meta_lib..&amp;meta_pre._history;
+    
+      where not( upcase( Library ) = "&amp;ds_lib" );
+      
+    run;
+  
+  %end;
+  
+  %Note_mput( macro=Archive_metadata_lib, msg=Library &amp;ds_lib successfully archived. )
+
+
+  %***** ***** ***** CLEAN UP ***** ***** *****;
+
+  %goto exit;
+  
+  %exit_err:
+  
+  %Err_mput( macro=Archive_metadata_lib, msg=No library was archived. )
+  
+  %exit:
+
+  %** Restore system options **;
+  
+  %Pop_option( obs )
+  %Pop_option( mprint )
+  
+  %Note_mput( macro=Archive_metadata_lib, msg=Macro Archive_metadata_lib() exiting. )
+
+%mend Archive_metadata_lib;
+
+      </pre>
+   </body>
+</html>

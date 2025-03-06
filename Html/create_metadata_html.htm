@@ -112,7 +112,7 @@
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %local html_doctype date_fmts datetime_fmts time_fmts cur_dt_raw cur_tm_raw cur_dt cur_tm i em;
+  %local html_doctype date_fmts datetime_fmts time_fmts cur_dt_raw cur_tm_raw cur_dt cur_tm i em archive_folder;
   
   %Note_mput( macro=Create_metadata_html, msg=Macro (version 7/28/17) starting. )
   
@@ -156,6 +156,8 @@
   %let cur_dt = %sysfunc( putn( &amp;cur_dt_raw, worddatx12. ) );
   %let cur_tm = %sysfunc( putn( &amp;cur_tm_raw, timeampm8. ) );
   
+  %let archive_folder = Archive\;
+  
   %** Save current OBS= setting then set to MAX **;
 
   %Push_option( obs )
@@ -178,13 +180,17 @@
   ****  Create library list page       ****;
   *****************************************;
   
+  proc sort data=&amp;meta_lib..&amp;meta_pre._libs out=&amp;meta_pre._libs;
+    by MetadataLibArchive Library;
+  run;
+  
   filename fl_out "&amp;html_folder.&amp;html_pre._libraries.&amp;html_suf";
   
   data _null_;
   
     length link $ 255;
     
-    retain LastMetadataUpdated altrow 0;
+    retain LastMetadataUpdated altrow HasActiveLibraries ret_MetadataLibArchive 0;
   
     file fl_out;
     
@@ -228,22 +234,47 @@
       
       ** Start table **;
       
-      put "&lt;h2&gt;Library List&lt;/h2&gt;" /;
-      
       put "&lt;table width=""100%"" cellspacing=""0"" cellpadding=""2""&gt;" /;
-      
-      put "&lt;tr&gt;";
 
+      if not MetadataLibArchive then do;
+      
+        put "&lt;tr&gt;";
+        put '&lt;th align="left" valign="bottom" colspan="2"&gt;&lt;h2&gt;Active Library List&lt;/h2&gt;&lt;/th&gt;';
+        put "&lt;/tr&gt;" /;
+        
+        put "&lt;tr&gt;";
+        put '&lt;th align="left" valign="bottom"&gt;Library Name&lt;/th&gt;';
+        put "&lt;th align=""left"" valign=""bottom""&gt;Description&lt;/th&gt;";
+        put "&lt;/tr&gt;" /;
+        
+        HasActiveLibraries = 1;
+      
+      end;
+    
+    end;
+    
+    if not ret_MetadataLibArchive and MetadataLibArchive then do;
+    
+      if HasActiveLibraries then do;
+        put "&lt;tr&gt;";
+        put '&lt;th align="left" valign="bottom" colspan="2"&gt;&amp;nbsp;&lt;/th&gt;';
+        put "&lt;/tr&gt;" /;
+      end;
+    
+      put "&lt;tr&gt;";
+      put '&lt;th align="left" valign="bottom" colspan="2"&gt;&lt;h2&gt;Archived Library List&lt;/h2&gt;&lt;/th&gt;';
+      put "&lt;/tr&gt;" /;
+
+      put "&lt;tr&gt;";
       put '&lt;th align="left" valign="bottom"&gt;Library Name&lt;/th&gt;';
       put "&lt;th align=""left"" valign=""bottom""&gt;Description&lt;/th&gt;";
-      
       put "&lt;/tr&gt;" /;
     
     end;
     
     ** List of libraries **;
     
-    link = "&amp;html_pre._" || trim( lowcase( library ) ) || ".&amp;html_suf";
+    link = cats( "&amp;html_pre._", lowcase( library ), ".&amp;html_suf" );
     
     if altrow and "&amp;html_altbgcol" ~= "" then
       put "&lt;tr bgcolor=""&amp;html_altbgcol""&gt;";
@@ -277,6 +308,8 @@
 
     end;
     
+    ret_MetadataLibArchive = MetadataLibArchive;
+    
   run;  
 
   *****************************************;
@@ -301,17 +334,10 @@
       delete;
     end;
     
-    html_file = "&amp;html_folder.&amp;html_pre._" || trim( lowcase( library ) ) || 
-                ".&amp;html_suf";
+    html_file = cats( "&amp;html_folder.&amp;html_pre._", lowcase( library ), ".&amp;html_suf" );
   
   run;
-  
-  proc print data=&amp;meta_pre._files;
-    format FileRestrict FileDesc $40.;
-    title2 "&amp;meta_pre._files";
-  run;
-  title2;
-  
+    
   data _null_;
   
     length link $ 255;
@@ -335,8 +361,15 @@
       put "&lt;head&gt;";
       put "  &lt;title&gt;&amp;html_title " library "library&lt;/title&gt;";
       
-      if "&amp;html_stylesht" ~= "" then
-        put "  &lt;link rel=""stylesheet"" type=""text/css"" href=""&amp;html_stylesht""&gt;";
+      if "&amp;html_stylesht" ~= "" then do;
+        if MetadataLibArchive then do;
+          put "  &lt;link rel=""stylesheet"" type=""text/css"" href=""&amp;html_stylesht""&gt;";
+          put "  &lt;link rel=""stylesheet"" type=""text/css"" href=""&amp;archive_folder.&amp;html_stylesht""&gt;";
+        end;
+        else do;
+          put "  &lt;link rel=""stylesheet"" type=""text/css"" href=""&amp;html_stylesht""&gt;";        
+        end;
+      end;  
         
       put &amp;html_meta_tags;
       put "&lt;/head&gt;" /;
@@ -355,7 +388,11 @@
       put "&lt;a href=""&amp;html_pre._libraries.&amp;html_suf""&gt;Libraries&lt;/a&gt;" ' &amp;gt;';
       put "&lt;b&gt;" library "&lt;/b&gt;" /;
       
-      put "&lt;h2&gt;File list for " library "library&lt;/h2&gt;" /;
+      if MetadataLibArchive then
+        put "&lt;h2&gt;File list for " library "library [archived metadata library]&lt;/h2&gt;" /;
+      else
+        put "&lt;h2&gt;File list for " library "library&lt;/h2&gt;" /;
+      
       
       ** Start table **;
       
@@ -377,12 +414,20 @@
     
     if in_files then do;
     
-      link = '"' || trim( lowcase( Library ) ) || '"';
+      link = cats( '"', lowcase( Library ), '"' );
       
       LastMetadataUpdated = max( LastMetadataUpdated, MetadataUpdated );
+      
+      if MetadataFileArchive then do;
 
-      link = "&amp;html_pre._" || trim( lowcase( library ) ) || 
-             "_" || trim( lowcase( FileName ) ) || ".&amp;html_suf";
+        link = cats( "&amp;archive_folder.&amp;html_pre._", lowcase( library ), "_", lowcase( FileName ), ".&amp;html_suf" );
+      
+      end;
+      else do;
+      
+        link = cats( "&amp;html_pre._", lowcase( library ), "_", lowcase( FileName ), ".&amp;html_suf" );
+
+      end;
       
       dt = datepart( FileUpdated );
       
@@ -457,8 +502,7 @@
     
     length html_file $ 255;
     
-    html_file = "&amp;html_folder.&amp;html_pre._" || trim( lowcase( library ) ) || 
-                "_" || trim( lowcase( FileName ) ) || ".&amp;html_suf";
+    html_file = cats( "&amp;html_folder.&amp;html_pre._", lowcase( library ), "_", lowcase( FileName ), ".&amp;html_suf" );
   
   run;
 
@@ -475,6 +519,16 @@
       by library filename;
 
     sys_cmd = '';
+    
+    ** Check whether file was archived **;
+    if MetadataFileArchive then do;
+    
+      %note_put( macro=CREATE_METADATA_HTML, 
+                 msg="File metadata was archived: " library= filename= )
+                 
+      return;   ** Skip to next record **;      
+    
+    end;
 
     ** Check that file has matching variable records **;
     if not in_vars then do;
@@ -482,24 +536,6 @@
       %err_put( macro=CREATE_METADATA_HTML, 
                 msg="No matching variable record for file: " library= filename= )
 
-      ** Notify by email of error **;
-      %if %length( &amp;error_notify ) &gt; 0 %then %do;
-        %if &amp;SYSSCP ~= WIN %then %do;
-          %let i = 1;
-          %let em = %scan( &amp;error_notify, &amp;i, %str( ) );
-          %do %until ( &amp;em = );
-            %note_mput( macro=CREATE_METADATA_HTML, msg=Email notification being sent to &amp;em.. )
-            sys_cmd = 
-              "mail /subject=""CREATE_METADATA_HTML error: No matching variable record for file: " || 
-              "library=" || trim(library) || " filename=" || trim(filename) ||
-              """ nl: ""&amp;em""";
-            rc = system( sys_cmd );
-            %let i = %eval( &amp;i + 1 );
-            %let em = %scan( &amp;error_notify, &amp;i, %str( ) );
-          %end;
-        %end;
-      %end;
-  
       return;   ** Skip to next record **;
     
     end;
@@ -509,7 +545,7 @@
     library = %capitalize( library );
     filename = %capitalize( filename );
     
-    cname = trim( library ) || "." || trim( filename );
+    cname = cats( library, ".", filename );
         
     if first.filename then do;
     
@@ -520,8 +556,10 @@
       put "&lt;head&gt;";
       put "  &lt;title&gt;&amp;html_title " cname "data set&lt;/title&gt;";
       
-      if "&amp;html_stylesht" ~= "" then
+      if "&amp;html_stylesht" ~= "" then do;
+        put "  &lt;link rel=""stylesheet"" type=""text/css"" href=""..\&amp;html_stylesht""&gt;";
         put "  &lt;link rel=""stylesheet"" type=""text/css"" href=""&amp;html_stylesht""&gt;";
+      end;
         
       put &amp;html_meta_tags;
       put "&lt;/head&gt;" /;
@@ -537,10 +575,9 @@
       
       put "&lt;h1&gt;&amp;meta_title&lt;/h1&gt;" /;
 
-      put "&lt;a href=""&amp;html_pre._libraries.&amp;html_suf""&gt;Libraries&lt;/a&gt;" ' &amp;gt;';
+      put "&lt;a href=""&amp;html_folder.&amp;html_pre._libraries.&amp;html_suf""&gt;Libraries&lt;/a&gt;" ' &amp;gt;';
 
-      link = "&lt;a href=&amp;html_pre._" || trim( lowcase( library ) ) || ".&amp;html_suf&gt;" ||
-             trim( library ) || '&lt;/a&gt; &amp;gt;';
+      link = cats( "&lt;a href=&amp;html_folder.&amp;html_pre._", lowcase( library ), ".&amp;html_suf&gt;", library, '&lt;/a&gt; &amp;gt;' );
 
       put link;
 
@@ -552,7 +589,7 @@
       
       put "&lt;table border=""0"" width=""100%"" cellspacing=""0"" cellpadding=""4""&gt;" /;
       
-      link = "&amp;html_pre._" || trim( lowcase( library ) ) || ".&amp;html_suf" ;
+      link = cats( "&amp;html_folder.&amp;html_pre._", lowcase( library ), ".&amp;html_suf" );
     
       put "&lt;tr&gt;";
       put "&lt;th align=""left"" valign=""top""&gt;Library:&lt;/th&gt;";
@@ -611,8 +648,7 @@
       dt = datepart( FileUpdated );
       tm = timepart( FileUpdated );
 
-      link = "&amp;html_pre._" || trim( lowcase( library ) ) || 
-                "_" || trim( lowcase( FileName ) ) || "_h.&amp;html_suf";
+      link = cats( "&amp;html_pre._", lowcase( library ), "_", lowcase( FileName ), "_h.&amp;html_suf" );
   
       put "&lt;tr&gt;";
       put "&lt;th align=""left"" valign=""top""&gt;Last updated:&lt;/th&gt;";
@@ -653,13 +689,12 @@
     else
       put "&lt;tr&gt;";
 
-    link = "&lt;td valign=""top""&gt;&lt;a name=""" || trim( VarName ) || """&gt;" || trim( VarName ) || "&lt;/a&gt;&lt;/td&gt;";
+    link = cats( "&lt;td valign=""top""&gt;&lt;a name=""", VarName, """&gt;", VarName, "&lt;/a&gt;&lt;/td&gt;" );
     put link;
 
     put "&lt;td valign=""top""&gt;" VarType "&lt;/td&gt;";
 
-    link = "&amp;html_pre._" || trim( lowcase( library ) ) || 
-           "_" || trim( lowcase( FileName ) ) || "_v.&amp;html_suf#" || trim( VarName );
+    link = cats( "&amp;html_pre._", lowcase( library ), "_", lowcase( FileName ), "_v.&amp;html_suf#", VarName );
     
     if ( VarType = "N" and _desc_n ~= . ) or ListFmtVals then
       put "&lt;td valign=""top""&gt;&lt;a href=""" link """&gt;Values&lt;/a&gt;&lt;/td&gt;";
@@ -750,8 +785,7 @@
     
     length html_file $ 255;
     
-    html_file = "&amp;html_folder.&amp;html_pre._" || trim( lowcase( library ) ) || 
-                "_" || trim( lowcase( FileName ) ) || "_v.&amp;html_suf";
+    html_file = cats( "&amp;html_folder.&amp;html_pre._", lowcase( library ), "_", lowcase( FileName ), "_v.&amp;html_suf" );
   
     keep library filename VarName VarNameUC VarType VarDesc VarFmt _desc_: html_file
        in_: Value FmtValue Frequency ListFmtVals MaxFmtVals;
@@ -778,12 +812,19 @@
     set &amp;meta_pre._values_file;
       by Library FileName VarNameUC;
 
+    ** Check whether file was archived **;
+    if MetadataFileArchive then do;
+    
+      return;   ** Skip to next record **;      
+    
+    end;
+
     file var_out filevar=html_file;
     
     library = %capitalize( library );
     filename = %capitalize( filename );
     
-    cname = trim( library ) || "." || trim( filename );
+    cname = cats( library, ".", filename );
         
     if first.filename then do;
     
@@ -794,8 +835,10 @@
       put "&lt;head&gt;";
       put "  &lt;title&gt;&amp;html_title " cname "variable values&lt;/title&gt;";
       
-      if "&amp;html_stylesht" ~= "" then
+      if "&amp;html_stylesht" ~= "" then do;
+        put "  &lt;link rel=""stylesheet"" type=""text/css"" href=""..\&amp;html_stylesht""&gt;";
         put "  &lt;link rel=""stylesheet"" type=""text/css"" href=""&amp;html_stylesht""&gt;";
+      end;
         
       put &amp;html_meta_tags;
       put "&lt;/head&gt;" /;
@@ -811,16 +854,13 @@
       
       put "&lt;h1&gt;&amp;meta_title&lt;/h1&gt;" /;
       
-      put "&lt;a href=""&amp;html_pre._libraries.&amp;html_suf""&gt;Libraries&lt;/a&gt;" ' &amp;gt;';
+      put "&lt;a href=""&amp;html_folder.&amp;html_pre._libraries.&amp;html_suf""&gt;Libraries&lt;/a&gt;" ' &amp;gt;';
 
-      link = "&lt;a href=&amp;html_pre._" || trim( lowcase( library ) ) || ".&amp;html_suf&gt;" ||
-             trim( library ) || '&lt;/a&gt; &amp;gt;';
+      link = cats( "&lt;a href=&amp;html_folder.&amp;html_pre._", lowcase( library ), ".&amp;html_suf&gt;", library, '&lt;/a&gt; &amp;gt;' );
 
       put link;
 
-      link = "&lt;a href=&amp;html_pre._" || trim( lowcase( library ) ) || "_" || 
-             trim( lowcase( filename ) ) || ".&amp;html_suf&gt;" ||
-             trim( filename ) || '&lt;/a&gt; &amp;gt;';
+      link = cats( "&lt;a href=&amp;html_pre._", lowcase( library ), "_", lowcase( filename ), ".&amp;html_suf&gt;", filename, '&lt;/a&gt; &amp;gt;' );
 
       put link;
 
@@ -867,22 +907,21 @@
       put "&lt;tr&gt;";
 
       if IsDateVal then
-        link = "&lt;td align=""left"" valign=""top"" colspan=""6""&gt;&lt;a name=""" || trim( VarName ) || """&gt;&lt;b&gt;" || 
-               trim( VarName ) || "&lt;/b&gt; - " || trim( VarDesc ) || " [SAS date value]&lt;/a&gt;&lt;/td&gt;";
+        link = cat( "&lt;td align=""left"" valign=""top"" colspan=""6""&gt;&lt;a name=""", trim( VarName ), """&gt;&lt;b&gt;", 
+               trim( VarName ), "&lt;/b&gt; - ", trim( VarDesc ), " [SAS date value]&lt;/a&gt;&lt;/td&gt;" );
       else if IsDatetimeVal then
-        link = "&lt;td align=""left"" valign=""top"" colspan=""6""&gt;&lt;a name=""" || trim( VarName ) || """&gt;&lt;b&gt;" || 
-               trim( VarName ) || "&lt;/b&gt; - " || trim( VarDesc ) || " [SAS datetime value]&lt;/a&gt;&lt;/td&gt;";
+        link = cat( "&lt;td align=""left"" valign=""top"" colspan=""6""&gt;&lt;a name=""", trim( VarName ), """&gt;&lt;b&gt;", 
+               trim( VarName ), "&lt;/b&gt; - ", trim( VarDesc ), " [SAS datetime value]&lt;/a&gt;&lt;/td&gt;" );
       else if IsTimeVal then
-        link = "&lt;td align=""left"" valign=""top"" colspan=""6""&gt;&lt;a name=""" || trim( VarName ) || """&gt;&lt;b&gt;" || 
-               trim( VarName ) || "&lt;/b&gt; - " || trim( VarDesc ) || " [SAS time value]&lt;/a&gt;&lt;/td&gt;";
+        link = cat( "&lt;td align=""left"" valign=""top"" colspan=""6""&gt;&lt;a name=""", trim( VarName ), """&gt;&lt;b&gt;", 
+               trim( VarName ), "&lt;/b&gt; - ", trim( VarDesc ), " [SAS time value]&lt;/a&gt;&lt;/td&gt;" );
       else
-        link = "&lt;td align=""left"" valign=""top"" colspan=""6""&gt;&lt;a name=""" || trim( VarName ) || """&gt;&lt;b&gt;" || 
-               trim( VarName ) || "&lt;/b&gt; - " || trim( VarDesc ) || "&lt;/a&gt;&lt;/td&gt;";
+        link = cat( "&lt;td align=""left"" valign=""top"" colspan=""6""&gt;&lt;a name=""", trim( VarName ), """&gt;&lt;b&gt;", 
+               trim( VarName ), "&lt;/b&gt; - ", trim( VarDesc ), "&lt;/a&gt;&lt;/td&gt;" );
 
       put link;
 
-      link = "&amp;html_pre._" || trim( lowcase( library ) ) || 
-             "_" || trim( lowcase( FileName ) ) || ".&amp;html_suf" || "#" || trim( VarName );
+      link = cats( "&amp;html_pre._", lowcase( library ), "_", lowcase( FileName ), ".&amp;html_suf", "#", VarName );
       
       put '&lt;td align="right" valign="top" colspan="6"&gt;&lt;a href="' link '"&gt;&lt;small&gt;Back to file&lt;/small&gt;&lt;/a&gt;&lt;/td&gt;';
 
@@ -1003,7 +1042,7 @@
         put '&lt;td align="right" width="5%"&gt;&lt;small&gt;&amp;nbsp;&lt;/small&gt;&lt;/td&gt;';
         put "&lt;td align=""left"" width=""15%""&gt;&lt;small&gt;&lt;i&gt;Value&lt;/i&gt;&lt;/small&gt;&lt;/td&gt;";
 
-        link = "(" || trim( VarFmt ) || ")";
+        link = cats( "(", VarFmt, ")" );
         
         put "&lt;td align=""left"" width=""60%"" colspan=""4""&gt;&lt;small&gt;&lt;i&gt;Formatted value "
             link 
@@ -1088,12 +1127,16 @@
   
   data &amp;meta_pre._history;
   
-    set &amp;meta_lib..&amp;meta_pre._history;
+    merge 
+      &amp;meta_lib..&amp;meta_pre._history (in=in1) 
+      &amp;meta_lib..&amp;meta_pre._files (keep=Library Filename MetadataFileArchive);
+    by Library Filename; 
+    
+    if in1 and not MetaDataFileArchive;
     
     length html_file $ 255;
     
-    html_file = "&amp;html_folder.&amp;html_pre._" || trim( lowcase( library ) ) || 
-                "_" || trim( lowcase( FileName ) ) || "_h.&amp;html_suf";
+    html_file = cats( "&amp;html_folder.&amp;html_pre._", lowcase( library ), "_", lowcase( FileName ), "_h.&amp;html_suf" );
   
   run;
 
@@ -1111,7 +1154,7 @@
     library = %capitalize( library );
     filename = %capitalize( filename );
     
-    cname = trim( library ) || "." || trim( filename );
+    cname = cats( library, ".", filename );
         
     if first.filename then do;
     
@@ -1124,8 +1167,10 @@
       put "&lt;head&gt;";
       put "  &lt;title&gt;&amp;html_title " cname "revision history&lt;/title&gt;";
       
-      if "&amp;html_stylesht" ~= "" then
+      if "&amp;html_stylesht" ~= "" then do;
+        put "  &lt;link rel=""stylesheet"" type=""text/css"" href=""..\&amp;html_stylesht""&gt;";
         put "  &lt;link rel=""stylesheet"" type=""text/css"" href=""&amp;html_stylesht""&gt;";
+      end;
         
       put &amp;html_meta_tags;
       put "&lt;/head&gt;";
@@ -1143,16 +1188,13 @@
       
       put "&lt;h1&gt;&amp;meta_title&lt;/h1&gt;" /;
 
-      put "&lt;a href=""&amp;html_pre._libraries.&amp;html_suf""&gt;Libraries&lt;/a&gt;" ' &amp;gt;';
+      put "&lt;a href=""&amp;html_folder.&amp;html_pre._libraries.&amp;html_suf""&gt;Libraries&lt;/a&gt;" ' &amp;gt;';
 
-      link = "&lt;a href=&amp;html_pre._" || trim( lowcase( library ) ) || ".&amp;html_suf&gt;" ||
-             trim( library ) || '&lt;/a&gt; &amp;gt;';
+      link = cats( "&lt;a href=&amp;html_folder.&amp;html_pre._", lowcase( library ), ".&amp;html_suf&gt;", library, '&lt;/a&gt; &amp;gt;' );
 
       put link;
 
-      link = "&lt;a href=&amp;html_pre._" || trim( lowcase( library ) ) || "_" || 
-             trim( lowcase( filename ) ) || ".&amp;html_suf&gt;" ||
-             trim( filename ) || '&lt;/a&gt; &amp;gt;';
+      link = cats( "&lt;a href=&amp;html_pre._", lowcase( library ), "_", lowcase( filename ), ".&amp;html_suf&gt;", filename, '&lt;/a&gt; &amp;gt;' );
 
       put link;
 
@@ -1247,9 +1289,12 @@
     
     data &amp;meta_pre._updates;
     
-      set &amp;meta_lib..&amp;meta_pre._history;
+      merge 
+        &amp;meta_lib..&amp;meta_pre._history (in=in1) 
+        &amp;meta_lib..&amp;meta_pre._files (keep=Library Filename MetadataFileArchive);
+      by Library Filename; 
       
-      where intck( 'month', datepart( FileUpdated ), date( ) ) &lt;= &amp;update_months;
+      if in1 and intck( 'month', datepart( FileUpdated ), date( ) ) &lt;= &amp;update_months;
 
     run;
     
@@ -1274,7 +1319,7 @@
       library = %capitalize( library );
       filename = %capitalize( filename );
       
-      cname = trim( library ) || "." || trim( filename );
+      cname = cats( library, ".", filename );
           
       if _n_ = 1 then do;
       
@@ -1359,9 +1404,17 @@
         put "&lt;tr&gt;";
         
       ** Link to library/file **;
+
+      if MetadataFileArchive then do;
+
+        link = cats( "&amp;archive_folder.&amp;html_pre._", lowcase( library ), "_", lowcase( FileName ), ".&amp;html_suf" );
       
-      link = "&amp;html_pre._" || trim( lowcase( library ) ) || 
-             "_" || trim( lowcase( FileName ) ) || ".&amp;html_suf";
+      end;
+      else do;
+      
+        link = cats( "&amp;html_pre._", lowcase( library ), "_", lowcase( FileName ), ".&amp;html_suf" );
+
+      end;
 
       put '&lt;td valign="top"&gt;&lt;a href="' link '"&gt;' cname "&lt;/a&gt;&lt;/td&gt;";
       
@@ -1440,7 +1493,7 @@
         library = %capitalize( library );
         filename = %capitalize( filename );
         
-        cname = trim( library ) || "." || trim( filename );
+        cname = cats( library, ".", filename );
           
         dt = datepart( FileUpdated );
         tm = timepart( FileUpdated );
@@ -1483,8 +1536,7 @@
         
         ** Link to library/file **;
         
-        link = "&amp;rss_url/&amp;html_pre._" || trim( lowcase( library ) ) || 
-               "_" || trim( lowcase( FileName ) ) || ".&amp;html_suf";
+        link = cats( "&amp;rss_url/&amp;html_pre._", lowcase( library ), "_", lowcase( FileName ), ".&amp;html_suf" );
 
         put "         &lt;link&gt;" link "&lt;/link&gt;";
         
