@@ -127,8 +127,6 @@
     where upcase( Library ) = "&ds_lib" and MetadataFileArchive = 0;
   quit;
   
-  %PUT _LOCAL_;
-
   ** Set MetadataLibArchive = 1 **;
   
   data &meta_lib..&meta_pre._libs;

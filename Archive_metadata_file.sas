@@ -105,8 +105,6 @@
     where upcase( Library ) = "&ds_lib";
   quit;
 
-  %PUT LIB_REGISTERED=&LIB_REGISTERED LIB_ARCHIVED=&LIB_ARCHIVED;
-  
   %if &lib_registered = 0 %then %do;
     %Err_mput( macro=Archive_metadata_lib, msg=Library &ds_lib is not registered in the metadata system. )
     %goto exit_err;
@@ -153,8 +151,6 @@
       where upcase( Library ) = "&ds_lib" and upcase( FileName ) = "&ds_name";
     quit;
 
-    %PUT FILE_REGISTERED=&FILE_REGISTERED FILE_ARCHIVED=&FILE_ARCHIVED;
-    
     %if &file_registered = 0 %then %do;
       %Err_mput( macro=Archive_metadata_file, msg=Data set &ds_lib..&ds_name is not registered in the metadata system. )
       %goto exit_err;
@@ -197,8 +193,6 @@
 
   %end;
   
-  %PUT _LOCAL_;
-
   ** Set MetadataFileArchive = 1 **;
   
   data &meta_lib..&meta_pre._files;

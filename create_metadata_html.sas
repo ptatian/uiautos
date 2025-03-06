@@ -330,13 +330,7 @@
     html_file = cats( "&html_folder.&html_pre._", lowcase( library ), ".&html_suf" );
   
   run;
-  
-  proc print data=&meta_pre._files;
-    format FileRestrict FileDesc $40.;
-    title2 "&meta_pre._files";
-  run;
-  title2;
-  
+    
   data _null_;
   
     length link $ 255;
@@ -535,24 +529,6 @@
       %err_put( macro=CREATE_METADATA_HTML, 
                 msg="No matching variable record for file: " library= filename= )
 
-      ** Notify by email of error **;
-      %if %length( &error_notify ) > 0 %then %do;
-        %if &SYSSCP ~= WIN %then %do;
-          %let i = 1;
-          %let em = %scan( &error_notify, &i, %str( ) );
-          %do %until ( &em = );
-            %note_mput( macro=CREATE_METADATA_HTML, msg=Email notification being sent to &em.. )
-            sys_cmd = 
-              "mail /subject=""CREATE_METADATA_HTML error: No matching variable record for file: " || 
-              "library=" || trim(library) || " filename=" || trim(filename) ||
-              """ nl: ""&em""";
-            rc = system( sys_cmd );
-            %let i = %eval( &i + 1 );
-            %let em = %scan( &error_notify, &i, %str( ) );
-          %end;
-        %end;
-      %end;
-  
       return;   ** Skip to next record **;
     
     end;
@@ -1144,7 +1120,12 @@
   
   data &meta_pre._history;
   
-    set &meta_lib..&meta_pre._history;
+    merge 
+      &meta_lib..&meta_pre._history (in=in1) 
+      &meta_lib..&meta_pre._files (keep=Library Filename MetadataFileArchive);
+    by Library Filename; 
+    
+    if in1 and not MetaDataFileArchive;
     
     length html_file $ 255;
     
@@ -1301,9 +1282,12 @@
     
     data &meta_pre._updates;
     
-      set &meta_lib..&meta_pre._history;
+      merge 
+        &meta_lib..&meta_pre._history (in=in1) 
+        &meta_lib..&meta_pre._files (keep=Library Filename MetadataFileArchive);
+      by Library Filename; 
       
-      where intck( 'month', datepart( FileUpdated ), date( ) ) <= &update_months;
+      if in1 and intck( 'month', datepart( FileUpdated ), date( ) ) <= &update_months;
 
     run;
     
@@ -1413,8 +1397,17 @@
         put "<tr>";
         
       ** Link to library/file **;
+
+      if MetadataFileArchive then do;
+
+        link = cats( "&archive_folder.&html_pre._", lowcase( library ), "_", lowcase( FileName ), ".&html_suf" );
       
-      link = cats( "&html_pre._", lowcase( library ), "_", lowcase( FileName ), ".&html_suf" );
+      end;
+      else do;
+      
+        link = cats( "&html_pre._", lowcase( library ), "_", lowcase( FileName ), ".&html_suf" );
+
+      end;
 
       put '<td valign="top"><a href="' link '">' cname "</a></td>";
       
