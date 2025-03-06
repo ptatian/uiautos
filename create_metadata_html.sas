@@ -173,13 +173,17 @@
   ****  Create library list page       ****;
   *****************************************;
   
+  proc sort data=&meta_lib..&meta_pre._libs out=&meta_pre._libs;
+    by MetadataLibArchive Library;
+  run;
+  
   filename fl_out "&html_folder.&html_pre._libraries.&html_suf";
   
   data _null_;
   
     length link $ 255;
     
-    retain LastMetadataUpdated altrow 0;
+    retain LastMetadataUpdated altrow HasActiveLibraries ret_MetadataLibArchive 0;
   
     file fl_out;
     
@@ -223,15 +227,40 @@
       
       ** Start table **;
       
-      put "<h2>Library List</h2>" /;
-      
       put "<table width=""100%"" cellspacing=""0"" cellpadding=""2"">" /;
-      
-      put "<tr>";
 
+      if not MetadataLibArchive then do;
+      
+        put "<tr>";
+        put '<th align="left" valign="bottom" colspan="2"><h2>Active Library List</h2></th>';
+        put "</tr>" /;
+        
+        put "<tr>";
+        put '<th align="left" valign="bottom">Library Name</th>';
+        put "<th align=""left"" valign=""bottom"">Description</th>";
+        put "</tr>" /;
+        
+        HasActiveLibraries = 1;
+      
+      end;
+    
+    end;
+    
+    if not ret_MetadataLibArchive and MetadataLibArchive then do;
+    
+      if HasActiveLibraries then do;
+        put "<tr>";
+        put '<th align="left" valign="bottom" colspan="2">&nbsp;</th>';
+        put "</tr>" /;
+      end;
+    
+      put "<tr>";
+      put '<th align="left" valign="bottom" colspan="2"><h2>Archived Library List</h2></th>';
+      put "</tr>" /;
+
+      put "<tr>";
       put '<th align="left" valign="bottom">Library Name</th>';
       put "<th align=""left"" valign=""bottom"">Description</th>";
-      
       put "</tr>" /;
     
     end;
@@ -271,6 +300,8 @@
       put "</html>";
 
     end;
+    
+    ret_MetadataLibArchive = MetadataLibArchive;
     
   run;  
 
@@ -329,8 +360,15 @@
       put "<head>";
       put "  <title>&html_title " library "library</title>";
       
-      if "&html_stylesht" ~= "" then
-        put "  <link rel=""stylesheet"" type=""text/css"" href=""&html_stylesht"">";
+      if "&html_stylesht" ~= "" then do;
+        if MetadataLibArchive then do;
+          put "  <link rel=""stylesheet"" type=""text/css"" href=""&html_stylesht"">";
+          put "  <link rel=""stylesheet"" type=""text/css"" href=""&archive_folder.&html_stylesht"">";
+        end;
+        else do;
+          put "  <link rel=""stylesheet"" type=""text/css"" href=""&html_stylesht"">";        
+        end;
+      end;  
         
       put &html_meta_tags;
       put "</head>" /;
@@ -349,7 +387,11 @@
       put "<a href=""&html_pre._libraries.&html_suf"">Libraries</a>" ' &gt;';
       put "<b>" library "</b>" /;
       
-      put "<h2>File list for " library "library</h2>" /;
+      if MetadataLibArchive then
+        put "<h2>File list for " library "library [archived metadata library]</h2>" /;
+      else
+        put "<h2>File list for " library "library</h2>" /;
+      
       
       ** Start table **;
       
@@ -532,8 +574,8 @@
       put "  <title>&html_title " cname "data set</title>";
       
       if "&html_stylesht" ~= "" then do;
-        put "  <link rel=""stylesheet"" type=""text/css"" href=""&html_stylesht"">";
         put "  <link rel=""stylesheet"" type=""text/css"" href=""..\&html_stylesht"">";
+        put "  <link rel=""stylesheet"" type=""text/css"" href=""&html_stylesht"">";
       end;
         
       put &html_meta_tags;
@@ -811,8 +853,8 @@
       put "  <title>&html_title " cname "variable values</title>";
       
       if "&html_stylesht" ~= "" then do;
-        put "  <link rel=""stylesheet"" type=""text/css"" href=""&html_stylesht"">";
         put "  <link rel=""stylesheet"" type=""text/css"" href=""..\&html_stylesht"">";
+        put "  <link rel=""stylesheet"" type=""text/css"" href=""&html_stylesht"">";
       end;
         
       put &html_meta_tags;
@@ -1138,8 +1180,8 @@
       put "  <title>&html_title " cname "revision history</title>";
       
       if "&html_stylesht" ~= "" then do;
-        put "  <link rel=""stylesheet"" type=""text/css"" href=""&html_stylesht"">";
         put "  <link rel=""stylesheet"" type=""text/css"" href=""..\&html_stylesht"">";
+        put "  <link rel=""stylesheet"" type=""text/css"" href=""&html_stylesht"">";
       end;
         
       put &html_meta_tags;
