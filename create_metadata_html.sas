@@ -238,7 +238,7 @@
     
     ** List of libraries **;
     
-    link = "&html_pre._" || trim( lowcase( library ) ) || ".&html_suf";
+    link = cats( "&html_pre._", lowcase( library ), ".&html_suf" );
     
     if altrow and "&html_altbgcol" ~= "" then
       put "<tr bgcolor=""&html_altbgcol"">";
@@ -296,8 +296,7 @@
       delete;
     end;
     
-    html_file = "&html_folder.&html_pre._" || trim( lowcase( library ) ) || 
-                ".&html_suf";
+    html_file = cats( "&html_folder.&html_pre._", lowcase( library ), ".&html_suf" );
   
   run;
   
@@ -372,20 +371,18 @@
     
     if in_files then do;
     
-      link = '"' || trim( lowcase( Library ) ) || '"';
+      link = cats( '"', lowcase( Library ), '"' );
       
       LastMetadataUpdated = max( LastMetadataUpdated, MetadataUpdated );
       
       if MetadataFileArchive then do;
 
-        link = "&archive_folder.&html_pre._" || trim( lowcase( library ) ) || 
-               "_" || trim( lowcase( FileName ) ) || ".&html_suf";
+        link = cats( "&archive_folder.&html_pre._", lowcase( library ), "_", lowcase( FileName ), ".&html_suf" );
       
       end;
       else do;
       
-        link = "&html_pre._" || trim( lowcase( library ) ) || 
-               "_" || trim( lowcase( FileName ) ) || ".&html_suf";
+        link = cats( "&html_pre._", lowcase( library ), "_", lowcase( FileName ), ".&html_suf" );
 
       end;
       
@@ -462,8 +459,7 @@
     
     length html_file $ 255;
     
-    html_file = "&html_folder.&html_pre._" || trim( lowcase( library ) ) || 
-                "_" || trim( lowcase( FileName ) ) || ".&html_suf";
+    html_file = cats( "&html_folder.&html_pre._", lowcase( library ), "_", lowcase( FileName ), ".&html_suf" );
   
   run;
 
@@ -524,7 +520,7 @@
     library = %capitalize( library );
     filename = %capitalize( filename );
     
-    cname = trim( library ) || "." || trim( filename );
+    cname = cats( library, ".", filename );
         
     if first.filename then do;
     
@@ -556,8 +552,7 @@
 
       put "<a href=""&html_folder.&html_pre._libraries.&html_suf"">Libraries</a>" ' &gt;';
 
-      link = "<a href=&html_folder.&html_pre._" || trim( lowcase( library ) ) || ".&html_suf>" ||
-             trim( library ) || '</a> &gt;';
+      link = cats( "<a href=&html_folder.&html_pre._", lowcase( library ), ".&html_suf>", library, '</a> &gt;' );
 
       put link;
 
@@ -569,7 +564,7 @@
       
       put "<table border=""0"" width=""100%"" cellspacing=""0"" cellpadding=""4"">" /;
       
-      link = "&html_folder.&html_pre._" || trim( lowcase( library ) ) || ".&html_suf" ;
+      link = cats( "&html_folder.&html_pre._", lowcase( library ), ".&html_suf" );
     
       put "<tr>";
       put "<th align=""left"" valign=""top"">Library:</th>";
@@ -628,8 +623,7 @@
       dt = datepart( FileUpdated );
       tm = timepart( FileUpdated );
 
-      link = "&html_pre._" || trim( lowcase( library ) ) || 
-                "_" || trim( lowcase( FileName ) ) || "_h.&html_suf";
+      link = cats( "&html_pre._", lowcase( library ), "_", lowcase( FileName ), "_h.&html_suf" );
   
       put "<tr>";
       put "<th align=""left"" valign=""top"">Last updated:</th>";
@@ -670,13 +664,12 @@
     else
       put "<tr>";
 
-    link = "<td valign=""top""><a name=""" || trim( VarName ) || """>" || trim( VarName ) || "</a></td>";
+    link = cats( "<td valign=""top""><a name=""", VarName, """>", VarName, "</a></td>" );
     put link;
 
     put "<td valign=""top"">" VarType "</td>";
 
-    link = "&html_pre._" || trim( lowcase( library ) ) || 
-           "_" || trim( lowcase( FileName ) ) || "_v.&html_suf#" || trim( VarName );
+    link = cats( "&html_pre._", lowcase( library ), "_", lowcase( FileName ), "_v.&html_suf#", VarName );
     
     if ( VarType = "N" and _desc_n ~= . ) or ListFmtVals then
       put "<td valign=""top""><a href=""" link """>Values</a></td>";
@@ -767,8 +760,7 @@
     
     length html_file $ 255;
     
-    html_file = "&html_folder.&html_pre._" || trim( lowcase( library ) ) || 
-                "_" || trim( lowcase( FileName ) ) || "_v.&html_suf";
+    html_file = cats( "&html_folder.&html_pre._", lowcase( library ), "_", lowcase( FileName ), "_v.&html_suf" );
   
     keep library filename VarName VarNameUC VarType VarDesc VarFmt _desc_: html_file
        in_: Value FmtValue Frequency ListFmtVals MaxFmtVals;
@@ -807,7 +799,7 @@
     library = %capitalize( library );
     filename = %capitalize( filename );
     
-    cname = trim( library ) || "." || trim( filename );
+    cname = cats( library, ".", filename );
         
     if first.filename then do;
     
@@ -839,14 +831,11 @@
       
       put "<a href=""&html_folder.&html_pre._libraries.&html_suf"">Libraries</a>" ' &gt;';
 
-      link = "<a href=&html_folder.&html_pre._" || trim( lowcase( library ) ) || ".&html_suf>" ||
-             trim( library ) || '</a> &gt;';
+      link = cats( "<a href=&html_folder.&html_pre._", lowcase( library ), ".&html_suf>", library, '</a> &gt;' );
 
       put link;
 
-      link = "<a href=&html_pre._" || trim( lowcase( library ) ) || "_" || 
-             trim( lowcase( filename ) ) || ".&html_suf>" ||
-             trim( filename ) || '</a> &gt;';
+      link = cats( "<a href=&html_pre._", lowcase( library ), "_", lowcase( filename ), ".&html_suf>", filename, '</a> &gt;' );
 
       put link;
 
@@ -893,22 +882,21 @@
       put "<tr>";
 
       if IsDateVal then
-        link = "<td align=""left"" valign=""top"" colspan=""6""><a name=""" || trim( VarName ) || """><b>" || 
-               trim( VarName ) || "</b> - " || trim( VarDesc ) || " [SAS date value]</a></td>";
+        link = cat( "<td align=""left"" valign=""top"" colspan=""6""><a name=""", trim( VarName ), """><b>", 
+               trim( VarName ), "</b> - ", trim( VarDesc ), " [SAS date value]</a></td>" );
       else if IsDatetimeVal then
-        link = "<td align=""left"" valign=""top"" colspan=""6""><a name=""" || trim( VarName ) || """><b>" || 
-               trim( VarName ) || "</b> - " || trim( VarDesc ) || " [SAS datetime value]</a></td>";
+        link = cat( "<td align=""left"" valign=""top"" colspan=""6""><a name=""", trim( VarName ), """><b>", 
+               trim( VarName ), "</b> - ", trim( VarDesc ), " [SAS datetime value]</a></td>" );
       else if IsTimeVal then
-        link = "<td align=""left"" valign=""top"" colspan=""6""><a name=""" || trim( VarName ) || """><b>" || 
-               trim( VarName ) || "</b> - " || trim( VarDesc ) || " [SAS time value]</a></td>";
+        link = cat( "<td align=""left"" valign=""top"" colspan=""6""><a name=""", trim( VarName ), """><b>", 
+               trim( VarName ), "</b> - ", trim( VarDesc ), " [SAS time value]</a></td>" );
       else
-        link = "<td align=""left"" valign=""top"" colspan=""6""><a name=""" || trim( VarName ) || """><b>" || 
-               trim( VarName ) || "</b> - " || trim( VarDesc ) || "</a></td>";
+        link = cat( "<td align=""left"" valign=""top"" colspan=""6""><a name=""", trim( VarName ), """><b>", 
+               trim( VarName ), "</b> - ", trim( VarDesc ), "</a></td>" );
 
       put link;
 
-      link = "&html_pre._" || trim( lowcase( library ) ) || 
-             "_" || trim( lowcase( FileName ) ) || ".&html_suf" || "#" || trim( VarName );
+      link = cats( "&html_pre._", lowcase( library ), "_", lowcase( FileName ), ".&html_suf", "#", VarName );
       
       put '<td align="right" valign="top" colspan="6"><a href="' link '"><small>Back to file</small></a></td>';
 
@@ -1029,7 +1017,7 @@
         put '<td align="right" width="5%"><small>&nbsp;</small></td>';
         put "<td align=""left"" width=""15%""><small><i>Value</i></small></td>";
 
-        link = "(" || trim( VarFmt ) || ")";
+        link = cats( "(", VarFmt, ")" );
         
         put "<td align=""left"" width=""60%"" colspan=""4""><small><i>Formatted value "
             link 
@@ -1118,8 +1106,7 @@
     
     length html_file $ 255;
     
-    html_file = "&html_folder.&html_pre._" || trim( lowcase( library ) ) || 
-                "_" || trim( lowcase( FileName ) ) || "_h.&html_suf";
+    html_file = cats( "&html_folder.&html_pre._", lowcase( library ), "_", lowcase( FileName ), "_h.&html_suf" );
   
   run;
 
@@ -1137,7 +1124,7 @@
     library = %capitalize( library );
     filename = %capitalize( filename );
     
-    cname = trim( library ) || "." || trim( filename );
+    cname = cats( library, ".", filename );
         
     if first.filename then do;
     
@@ -1173,14 +1160,11 @@
 
       put "<a href=""&html_folder.&html_pre._libraries.&html_suf"">Libraries</a>" ' &gt;';
 
-      link = "<a href=&html_folder.&html_pre._" || trim( lowcase( library ) ) || ".&html_suf>" ||
-             trim( library ) || '</a> &gt;';
+      link = cats( "<a href=&html_folder.&html_pre._", lowcase( library ), ".&html_suf>", library, '</a> &gt;' );
 
       put link;
 
-      link = "<a href=&html_pre._" || trim( lowcase( library ) ) || "_" || 
-             trim( lowcase( filename ) ) || ".&html_suf>" ||
-             trim( filename ) || '</a> &gt;';
+      link = cats( "<a href=&html_pre._", lowcase( library ), "_", lowcase( filename ), ".&html_suf>", filename, '</a> &gt;' );
 
       put link;
 
@@ -1302,7 +1286,7 @@
       library = %capitalize( library );
       filename = %capitalize( filename );
       
-      cname = trim( library ) || "." || trim( filename );
+      cname = cats( library, ".", filename );
           
       if _n_ = 1 then do;
       
@@ -1388,8 +1372,7 @@
         
       ** Link to library/file **;
       
-      link = "&html_pre._" || trim( lowcase( library ) ) || 
-             "_" || trim( lowcase( FileName ) ) || ".&html_suf";
+      link = cats( "&html_pre._", lowcase( library ), "_", lowcase( FileName ), ".&html_suf" );
 
       put '<td valign="top"><a href="' link '">' cname "</a></td>";
       
@@ -1468,7 +1451,7 @@
         library = %capitalize( library );
         filename = %capitalize( filename );
         
-        cname = trim( library ) || "." || trim( filename );
+        cname = cats( library, ".", filename );
           
         dt = datepart( FileUpdated );
         tm = timepart( FileUpdated );
@@ -1511,8 +1494,7 @@
         
         ** Link to library/file **;
         
-        link = "&rss_url/&html_pre._" || trim( lowcase( library ) ) || 
-               "_" || trim( lowcase( FileName ) ) || ".&html_suf";
+        link = cats( "&rss_url/&html_pre._", lowcase( library ), "_", lowcase( FileName ), ".&html_suf" );
 
         put "         <link>" link "</link>";
         
