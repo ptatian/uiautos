@@ -119,7 +119,7 @@
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
    
-  %local sortvars SAS_DATASET_VIEW lib_exists ds_name25 allfvar i em num_fval_vars num_obs num_vars;
+  %local sortvars SAS_DATASET_VIEW lib_exists lib_archived file_registered file_archived ds_name25 allfvar i em num_fval_vars num_obs num_vars;
 
   %let SAS_DATASET_VIEW = "SASDSV";
     
@@ -164,22 +164,22 @@
     %goto exit_err;
   %end;
 
-  %** Check that library is registered **;
+  %** Check that library is registered and not archived **;
   
-  %Data_to_format( 
-    FmtName=$libchk, 
-    inDS=&meta_lib..&meta_pre._libs, 
-    value=upcase( Library ),
-    label="Y",
-    otherlabel="N",
-    print=N )
+  proc sql noprint;
+    select count( Library ), MetadataLibArchive into :lib_exists, :lib_archived from &meta_lib..&meta_pre._libs
+    where upcase( Library ) = upcase( "&ds_lib" );
+  quit;
 
-  data _null_;
-    call symput( 'lib_exists', put( upcase( "&ds_lib_display" ), $libchk. ) );
-  run;
-    
-  %if &lib_exists = N %then %do;
+  /***%put lib_exists=&lib_exists lib_archived=&lib_archived;***/
+  
+  %if &lib_exists = 0 %then %do;
     %Err_mput( macro=Update_metadata_file, msg=Library &ds_lib_display is not registered in the metadata system. )
+    %goto exit_err;
+  %end;
+  
+  %if &lib_archived = 1 %then %do;
+    %Err_mput( macro=Update_metadata_file, msg=Library &ds_lib_display is archived. No updates can be made to this library. )
     %goto exit_err;
   %end;
   
@@ -189,6 +189,23 @@
             %Dataset_exists( &ds_lib..&ds_name, quiet=n, memtype=view ) ) %then %do;
     %Err_mput( macro=Update_metadata_file, msg=The data set &ds_lib..&ds_name does not exist. )
     %goto exit_err;
+  %end;
+
+  %** Check whether data set is archived **;
+
+  %if %Dataset_exists( &meta_lib..&meta_pre._files ) %then %do;
+
+    proc sql noprint;
+      select count( FileName ), MetadataFileArchive into :file_registered, :file_archived from &meta_lib..&meta_pre._files
+      where upcase( Library ) = upcase( "&ds_lib" ) and upcase( FileName ) = upcase( "&ds_name" );
+    quit;
+
+    %if &file_registered = 1 %then %do;
+      %if &file_archived = 1 %then %do;
+        %Warn_mput( macro=Update_metadata_file, msg=Metadata for data set &ds_lib..&ds_name was previously archived. Metadata will be returned to active status. )
+      %end;
+    %end;
+    
   %end;
 
 
@@ -292,7 +309,7 @@
     /* File record */
     _f_&ds_name25 
       (keep=libname_display memname memlabel nobs modate MetadataUpdated FileCreator FileProcess
-            FileFmt FileRestrict FileSortedBy
+            FileFmt FileRestrict FileSortedBy MetadataFileArchive 
        rename=(libname_display=Library memname=FileName memlabel=FileDesc nobs=NumObs 
                modate=FileUpdated))
 
@@ -326,7 +343,7 @@
       FileCreator FileProcess $ 80
       FileRestrict FileSortedBy $ 250
       FileRevisions $ 500
-      ListFmtVals 3
+      MetadataFileArchive ListFmtVals 3
     ;
     
     ** Process file-level data (first obs.) **;
@@ -356,6 +373,7 @@
       FileRevisions = "&revisions";
       FileRestrict = "&restrictions";
       FileSortedBy = lowcase( "&sortvars" );
+      MetadataFileArchive = 0;
       
       output _f_&ds_name25;
       
@@ -396,6 +414,7 @@
       ListFmtVals = "Formatted values listed in metadata (1=Yes)"
       VarNameUC = "Variable name (uppercase, for sorting)"
       VarType = "Variable type (C/N)"
+      MetadataFileArchive = "Metadata for file has been archived (1=Yes)"
     ;
     
   run;
@@ -554,6 +573,8 @@
   
     update &meta_lib..&meta_pre._files _f_&ds_name25 updatemode=nomissingcheck;
       by Library FileName;
+    
+    if missing( MetadataFileArchive ) then MetadataFileArchive = 0;
     
   run;
   
@@ -756,15 +777,16 @@
 
 ** Autocall macros **;
 
-filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
-options sasautos=(uiautos sasautos) noxwait;
+***filename uiautos "K:\Metro\PTatian\UISUG\Uiautos";
+filename uiautos "C:\DCData\uiautos";
+options sasautos=(uiautos sasautos) noxwait nocenter;
 
 ** Set up and clear test folder **;
 
-x "md d:\temp\Update_metadata_file_test";
-x "del /q d:\temp\Update_metadata_file_test\*.*";
+x "md c:\temp\Update_metadata_file_test";
+x "del /q c:\temp\Update_metadata_file_test\*.*";
 
-libname test "d:\temp\Update_metadata_file_test\";
+libname test "c:\temp\Update_metadata_file_test\";
 
 proc format library=work;
   value $region
@@ -814,6 +836,26 @@ run;
 %File_info( data=Test.shoes, freqvars=region )
 %File_info( data=Test.shoes_nonum, stats= )
 %File_info( data=Test.shoes_empty, stats= )
+
+
+** Testing for reporting error when library metadata file does not exist **;
+
+%Update_metadata_file( 
+         ds_lib=Test,
+         ds_name=Shoes,
+         creator=SAS Institute,
+         creator_process=SAS Institute,
+         revisions=Test file.,
+         meta_lib=Test
+      )
+
+** Create library metadata file **;
+
+%Update_metadata_library( 
+         lib_name=Foo,
+         lib_desc=Foo library,
+         meta_lib=Test
+      )
 
 
 ** Testing for reporting error when trying to register a data set to an unregistered library **;
@@ -874,7 +916,7 @@ run;
 proc datasets library=Test memtype=(data);
 quit;
 
-%File_info( data=Test.Meta_files, printobs=50, contents=n, stats= )
+%File_info( data=Test.Meta_files, printobs=50, contents=y, stats= )
 %File_info( data=Test.Meta_vars, printobs=50, contents=n, stats= )
 %File_info( data=Test.Meta_fval, printobs=50, contents=n, stats= )
 %File_info( data=Test.Meta_history, printobs=50, contents=n, stats= )

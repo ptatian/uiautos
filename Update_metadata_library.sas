@@ -59,10 +59,11 @@
   
   data _lib_&lib_name;
   
-    length Library $ 32 LibDesc $ 400;
+    length Library $ 32 LibDesc $ 400 MetadataLibArchive 3;
     
     Library = upcase( "&lib_name" );
     LibDesc = "&lib_desc";
+    MetadataLibArchive = 0;
   
   run;
   
@@ -75,12 +76,19 @@
     run;
   %end;  
 
-** Update library list **;
+  ** Update library list **;
   
   data &meta_lib..&meta_pre._libs (compress=char);
   
     update &meta_lib..&meta_pre._libs _lib_&lib_name;
       by Library;
+    
+    if missing( MetadataLibArchive ) then MetadataLibArchive = 0;
+
+    label
+      Library = "Library name"
+      LibDesc = "Library description"
+      MetadataLibArchive = "Metadata for library has been archived (1=Yes)";
       
   run;
   
@@ -144,6 +152,6 @@ options sasautos=(uiautos sasautos);
 proc datasets library=work memtype=(data);
 quit;
 
-%File_info( data=Meta_libs, printobs=50, contents=n, stats= )
+%File_info( data=Meta_libs, printobs=50, contents=y, stats= )
 
 /**********************************************************************/
