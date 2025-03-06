@@ -574,6 +574,8 @@
     update &meta_lib..&meta_pre._files _f_&ds_name25 updatemode=nomissingcheck;
       by Library FileName;
     
+    if missing( MetadataFileArchive ) then MetadataFileArchive = 0;
+    
   run;
   
   ** Update file history record in metadata **;

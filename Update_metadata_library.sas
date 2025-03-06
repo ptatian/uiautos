@@ -76,13 +76,15 @@
     run;
   %end;  
 
-** Update library list **;
+  ** Update library list **;
   
   data &meta_lib..&meta_pre._libs (compress=char);
   
     update &meta_lib..&meta_pre._libs _lib_&lib_name;
       by Library;
     
+    if missing( MetadataLibArchive ) then MetadataLibArchive = 0;
+
     label
       Library = "Library name"
       LibDesc = "Library description"
