@@ -193,7 +193,7 @@
   
     file fl_out;
     
-    set &meta_lib..&meta_pre._libs end=last; 
+    set &meta_pre._libs end=last; 
         
     if _n_ = 1 then do;
     
