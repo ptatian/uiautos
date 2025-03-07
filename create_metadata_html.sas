@@ -21,7 +21,8 @@
          rss_timezone=EST,   /** Timezone for RSS date/time stamps **/
          creator_fmt=,       /** Format for FileCreator (lowercase values) **/
          error_notify=,      /** Email addresses to notify when error occurs (DEPRECATED) **/
-         html_folder= ,      /** Folder for HTML files **/
+         html_folder= ,      /** Folder for HTML files. Must end with \ **/
+         html_link_folder= , /** Folder path to use for full HTML links. Must end with \ (defaults to html_folder) **/
          html_pre= meta,     /** Filename prefix for HTML files **/
          html_suf= html,     /** Filename suffix for HTML files **/
          html_title= Metadata -,  /** HTML title prefix **/
@@ -100,6 +101,7 @@
    10/21/11  PAT Added macro starting and ending messages to LOG. 
    03/30/14  PAT Added Creator process (FileProcess) to file history pages.
    07/28/17  PAT Added support for datetime and time vars.
+   03/07/25  PAT Support for archived metadata. Added html_link_folder= parameter.
 
   *********************************************************************/
 
@@ -107,7 +109,7 @@
    
   %local html_doctype date_fmts datetime_fmts time_fmts cur_dt_raw cur_tm_raw cur_dt cur_tm i em archive_folder;
   
-  %Note_mput( macro=Create_metadata_html, msg=Macro (version 7/28/17) starting. )
+  %Note_mput( macro=Create_metadata_html, msg=Macro (version 3/7/25) starting. )
   
   %** HTML document type declaration **;
   
@@ -162,6 +164,10 @@
   
   %if &update_months = %then %let update_months = 0;
   
+  %** Set html_link_folder= parameter to html_folder if missing **;
+  
+  %if %length( &html_link_folder ) = 0 %then %let html_link_folder = &html_folder; 
+  
     
   %***** ***** ***** ERROR CHECKS ***** ***** *****;
 
@@ -187,7 +193,7 @@
   
     file fl_out;
     
-    set &meta_lib..&meta_pre._libs end=last; 
+    set &meta_pre._libs end=last; 
         
     if _n_ = 1 then do;
     
@@ -568,9 +574,9 @@
       
       put "<h1>&meta_title</h1>" /;
 
-      put "<a href=""&html_folder.&html_pre._libraries.&html_suf"">Libraries</a>" ' &gt;';
+      put "<a href=""&html_link_folder.&html_pre._libraries.&html_suf"">Libraries</a>" ' &gt;';
 
-      link = cats( "<a href=&html_folder.&html_pre._", lowcase( library ), ".&html_suf>", library, '</a> &gt;' );
+      link = cats( "<a href=&html_link_folder.&html_pre._", lowcase( library ), ".&html_suf>", library, '</a> &gt;' );
 
       put link;
 
@@ -582,7 +588,7 @@
       
       put "<table border=""0"" width=""100%"" cellspacing=""0"" cellpadding=""4"">" /;
       
-      link = cats( "&html_folder.&html_pre._", lowcase( library ), ".&html_suf" );
+      link = cats( "&html_link_folder.&html_pre._", lowcase( library ), ".&html_suf" );
     
       put "<tr>";
       put "<th align=""left"" valign=""top"">Library:</th>";
@@ -847,9 +853,9 @@
       
       put "<h1>&meta_title</h1>" /;
       
-      put "<a href=""&html_folder.&html_pre._libraries.&html_suf"">Libraries</a>" ' &gt;';
+      put "<a href=""&html_link_folder.&html_pre._libraries.&html_suf"">Libraries</a>" ' &gt;';
 
-      link = cats( "<a href=&html_folder.&html_pre._", lowcase( library ), ".&html_suf>", library, '</a> &gt;' );
+      link = cats( "<a href=&html_link_folder.&html_pre._", lowcase( library ), ".&html_suf>", library, '</a> &gt;' );
 
       put link;
 
@@ -1181,9 +1187,9 @@
       
       put "<h1>&meta_title</h1>" /;
 
-      put "<a href=""&html_folder.&html_pre._libraries.&html_suf"">Libraries</a>" ' &gt;';
+      put "<a href=""&html_link_folder.&html_pre._libraries.&html_suf"">Libraries</a>" ' &gt;';
 
-      link = cats( "<a href=&html_folder.&html_pre._", lowcase( library ), ".&html_suf>", library, '</a> &gt;' );
+      link = cats( "<a href=&html_link_folder.&html_pre._", lowcase( library ), ".&html_suf>", library, '</a> &gt;' );
 
       put link;
 
