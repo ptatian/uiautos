@@ -175,7 +175,7 @@
   
   proc sql noprint;
     select count( Library ), MetadataLibArchive into :lib_exists, :lib_archived from &amp;meta_lib..&amp;meta_pre._libs
-    where upcase( Library ) = upcase( "&amp;ds_lib" );
+    where upcase( Library ) = upcase( "&amp;ds_lib_display" );
   quit;
 
   /***%put lib_exists=&amp;lib_exists lib_archived=&amp;lib_archived;***/
