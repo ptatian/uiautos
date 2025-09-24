@@ -94,6 +94,7 @@
    05/12/23  RP Updated 2022 to ANNUAL; add 2023 to Q1. 
    02/07/24  PT Updated 2023 to ANNUAL. Fixed error in 2023 macro var name for CUUR0000SA0L2.
    06/12/24  RP Updated 2023 to ANNUAL. Add 2024 to average of Jan-May.
+   09/23/25  RP Updated 2024 to ANNUAL; 2025 to HALF1.
   *********************************************************************/
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
@@ -108,12 +109,12 @@
     CPI_2003 CPI_2004 CPI_2005 CPI_2006 CPI_2007 CPI_2008
     CPI_2009 CPI_2010 CPI_2011 CPI_2012 CPI_2013 CPI_2014
     CPI_2015 CPI_2016 CPI_2017 CPI_2018 CPI_2019 CPI_2020
-    CPI_2021 CPI_2022 CPI_2023 CPI_2024;
+    CPI_2021 CPI_2022 CPI_2023 CPI_2024 CPI_2025;
 
   %global _dcnv_count;
 
   %let MIN_YEAR = 1979;
-  %let MAX_YEAR = 2024;
+  %let MAX_YEAR = 2025;
 
   %let series = %upcase( &series );
 
@@ -171,7 +172,8 @@
 	%let CPI_2021 = 270.970;  %** Annual 2021 **;
 	%let CPI_2022 = 292.655;  %** Annual 2022 **;
 	%let CPI_2023 = 304.702;  %** Annual 2023 **;
-	%let CPI_2024 = 311.738;  %** Average of Jan-May 2024 **;
+	%let CPI_2024 = 313.689;  %** Annual 2024 **;
+	%let CPI_2025 = 320.229;  %** HALF1 2025 **;
   %end;
   %else %if &series = CUUR0000SA0L2 %then %do;
     %************************************************** 
@@ -227,7 +229,8 @@
 	%let CPI_2021 = 249.142;  %** Annual 2021 **; 
 	%let CPI_2022 = 271.690;  %** Annual 2022 **;
 	%let CPI_2023 = 278.412;  %** Annual 2023 **;
-	%let CPI_2024 = 282.376;  %** Average of Jan-May 2024 **;
+	%let CPI_2024 = 283.200;  %** Annual 2024 **;
+	%let CPI_2025 = 287.617;  %** HALF1 2025 **;
   %end;
   %else %do;
     %err_mput( macro=Dollar_convert, msg=Invalid SERIES= value: &series )
