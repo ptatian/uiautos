@@ -95,6 +95,7 @@
    02/07/24  PT Updated 2023 to ANNUAL. Fixed error in 2023 macro var name for CUUR0000SA0L2.
    06/12/24  RP Updated 2023 to ANNUAL. Add 2024 to average of Jan-May.
    09/23/25  RP Updated 2024 to ANNUAL; 2025 to HALF1.
+   06/11/26  PT Updated 2025 to ANNUAL. Added 2026, avg Jan-May.
   *********************************************************************/
 
   %***** ***** ***** MACRO SET UP ***** ***** *****;
@@ -109,12 +110,12 @@
     CPI_2003 CPI_2004 CPI_2005 CPI_2006 CPI_2007 CPI_2008
     CPI_2009 CPI_2010 CPI_2011 CPI_2012 CPI_2013 CPI_2014
     CPI_2015 CPI_2016 CPI_2017 CPI_2018 CPI_2019 CPI_2020
-    CPI_2021 CPI_2022 CPI_2023 CPI_2024 CPI_2025;
+    CPI_2021 CPI_2022 CPI_2023 CPI_2024 CPI_2025 CPI_2026;
 
   %global _dcnv_count;
 
   %let MIN_YEAR = 1979;
-  %let MAX_YEAR = 2025;
+  %let MAX_YEAR = 2026;
 
   %let series = %upcase( &series );
 
@@ -173,7 +174,8 @@
 	%let CPI_2022 = 292.655;  %** Annual 2022 **;
 	%let CPI_2023 = 304.702;  %** Annual 2023 **;
 	%let CPI_2024 = 313.689;  %** Annual 2024 **;
-	%let CPI_2025 = 320.229;  %** HALF1 2025 **;
+	%let CPI_2025 = 321.943;  %** Annual 2025 **;
+	%let CPI_2026 = 330.079;  %** Jan-May 2026 **;
   %end;
   %else %if &series = CUUR0000SA0L2 %then %do;
     %************************************************** 
@@ -230,7 +232,8 @@
 	%let CPI_2022 = 271.690;  %** Annual 2022 **;
 	%let CPI_2023 = 278.412;  %** Annual 2023 **;
 	%let CPI_2024 = 283.200;  %** Annual 2024 **;
-	%let CPI_2025 = 287.617;  %** HALF1 2025 **;
+	%let CPI_2025 = 289.002;  %** Annual 2025 **;
+	%let CPI_2026 = 296.595;  %** Jan-May 2026 **;
   %end;
   %else %do;
     %err_mput( macro=Dollar_convert, msg=Invalid SERIES= value: &series )
@@ -300,7 +303,7 @@ options sasautos=(uiautos sasautos);
 options mprint nosymbolgen nomlogic;
 options msglevel=i;
 
-%let last_year = 2024;
+%let last_year = 2026;
 
 %let i = 12345;
 %let _i = 67890;
@@ -349,12 +352,12 @@ data _null_;
   ** LAST ENTRY IS MEANT TO PRODUCE AN ERROR **; 
 
 cards;
-100 1980 2024
-100 2023 1980
-100 1994 2021
-100 1995 2021
-100 2000 2021
-100 2021 1995
+100 1980 2026
+100 2026 1980
+100 1994 2026
+100 1995 2026
+100 2000 2026
+100 2026 1995
 100 1995 2099
 ;
   
